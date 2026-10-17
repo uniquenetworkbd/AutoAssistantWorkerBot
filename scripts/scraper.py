@@ -123,9 +123,21 @@ def _extract(page, task: dict[str, Any], url: str) -> list[dict[str, Any]]:
     return records
 
 
-def run() -> dict[str, Any]:
+def run(*, smoke_test: bool = False) -> dict[str, Any]:
     started = datetime.now(timezone.utc)
-    targets = [target for target in _load_targets() if target.get("enabled", True)]
+    configured_targets = _load_targets()
+    if smoke_test:
+        # Safe public smoke target used only for a manual workflow validation.
+        targets = [{
+            "site_key": "github_actions_smoke_test",
+            "enabled": True,
+            "target_url": "https://example.com",
+            "login": {"required": False},
+            "task": {"data_selector": "h1", "extract": "text", "max_items": 1},
+        }]
+    else:
+        targets = [target for target in configured_targets if target.get("enabled", True)]
+
     brain = _load_brain()
     results: list[dict[str, Any]] = []
 
@@ -209,5 +221,6 @@ def run() -> dict[str, Any]:
         "target_count": len(results),
         "success_count": sum(item["status"] == "success" for item in results),
         "failure_count": sum(item["status"] != "success" for item in results),
+        "smoke_test": smoke_test,
         "targets": results,
     }
