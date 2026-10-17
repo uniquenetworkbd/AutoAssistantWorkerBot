@@ -1,54 +1,146 @@
 # AutoAssistantWorkerBot
 
-Production-oriented GitHub Actions worker for collecting tabular data from authorized target websites, learning login selectors with Gemini, generating an Excel report, and delivering the report through Telegram.
+JSON-first GitHub Actions automation worker for authorized website automation. The worker uses Playwright for browsing, Gemini for login-selector discovery, JSON for target configuration and learned memory, and Telegram for execution reports and alerts.
 
 ## Architecture
 
 ```text
-.github/workflows/bot_runner.yml  -> scheduled/manual GitHub Actions entrypoint
-scripts/main.py                   -> orchestration + failure handling
-scripts/scraper.py                -> Playwright browsing, login, table extraction
-scripts/ai_parser.py              -> Gemini selector discovery
-scripts/notifier.py               -> Telegram report/alert delivery
-memory/brain.json                 -> learned selectors
-memory/error_log.json             -> persistent error history
-input/targets.xlsx                -> target configuration
-reports/                          -> generated reports (ignored by git)
+.github/
+├── SECRETS_CONFIG.md          # secret-name reference; never stores raw secrets
+└── workflows/
+    └── bot_runner.yml         # manual + 30-minute scheduled execution
+
+input/
+└── targets.json               # target URLs, login configuration and task parameters
+
+memory/
+├── brain.json                 # learned login selectors and verification metadata
+└── error_log.json             # persistent credential-free execution errors
+
+scripts/
+├── main.py                    # orchestration and process exit status
+├── scraper.py                 # Playwright JSON-first automation engine
+├── ai_parser.py               # Gemini selector discovery
+└── notifier.py                # Telegram reporting and error persistence
+
+requirements.txt               # Playwright + requests + Gemini only
+reports/                       # optional local/generated reports; ignored by Git
 ```
 
-## GitHub configuration
+## Required GitHub Secrets
 
-Create these repository secrets:
+The workflow uses these exact repository secret names:
 
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
-- `GEMINI_API_KEY`
+- `AUTO_ASSISTANT_BOT_TOKEN`
+- `AUTO_ASSISTANT_CHAT_ID`
+- `AUTO_ASSISTANT_GEMINI_API_KEY`
+
+The detailed maintenance reference is `.github/SECRETS_CONFIG.md`. **Never commit raw secret values.**
 
 Optional repository variable:
 
-- `GEMINI_MODEL` (defaults to `gemini-2.0-flash`)
+- `GEMINI_MODEL` — model name; defaults to `gemini-2.0-flash`.
 
-If a target needs credentials, store the actual username/password as GitHub Actions secrets or variables and put their names in the `username` and `password` columns of `input/targets.xlsx`. Do not commit real credentials.
+## Target configuration
 
-## targets.xlsx
+`input/targets.json` is a JSON array. A safe disabled starter target is included so the repository can be installed and validated without attempting an unauthorized website.
 
-Required column: `url`.
+Example:
 
-Optional columns: `login_required`, `username`, `password`, `table_selector`.
+```json
+[
+  {
+    "site_key": "example",
+    "enabled": true,
+    "target_url": "https://authorized.example.com/login",
+    "login": {
+      "required": true,
+      "username_env": "EXAMPLE_USERNAME",
+      "password_env": "EXAMPLE_PASSWORD"
+    },
+    "task": {
+      "data_selector": ".result-row",
+      "wait_for_selector": ".result-row",
+      "extract": "text",
+      "max_items": 50
+    }
+  }
+]
+```
 
-`username` and `password` may contain environment-variable/secret names; the worker resolves those names from the GitHub Actions environment. A literal credential also works technically, but is strongly discouraged.
+Supported extraction modes are `text`, `html`, and `links`. If `data_selector` is empty, the worker returns a bounded page-title/body-text record.
 
-The first run may call Gemini to discover the login selectors. The resulting selectors are saved under the target URL in `memory/brain.json`. Subsequent runs reuse them.
+### Credentials
 
-## Run
+Credentials must never be written into `targets.json`. Store them as GitHub Actions secrets and reference their environment-variable names through `username_env` and `password_env`.
 
-- **Manual:** GitHub → Actions → AutoAssistantWorkerBot → Run workflow.
-- **Scheduled:** every 30 minutes by default.
+GitHub Actions cannot dynamically expose arbitrary secret names referenced by JSON. Therefore, each target-specific credential secret must be explicitly mapped in `.github/workflows/bot_runner.yml`, for example:
 
-The workflow installs Python 3.11, dependencies, and Playwright Chromium. On success it sends `Live_Report_YYYY-MM-DD.xlsx` to Telegram. On failure it logs the error and sends a Telegram alert. Learned selector memory and error logs are committed back to `main` automatically.
+```yaml
+env:
+  EXAMPLE_USERNAME: ${{ secrets.EXAMPLE_USERNAME }}
+  EXAMPLE_PASSWORD: ${{ secrets.EXAMPLE_PASSWORD }}
+```
 
-## Operational notes
+The three required AutoAssistant secrets are already mapped by the workflow.
 
-Use this worker only against websites you are authorized to automate and collect data from. Gemini receives sanitized page structure and an optional screenshot for selector discovery; login credentials are not sent to Gemini.
+## Learned selector memory
 
-For selector stability, prefer an explicit `table_selector` when the target site has multiple unrelated tables.
+`memory/brain.json` starts as `{}`. For a login-enabled target without learned selectors, the worker:
+
+1. Opens the target with Playwright headlessly.
+2. Sanitizes the DOM and removes form values and common token/password attributes.
+3. Optionally captures the current page screenshot.
+4. Sends only sanitized page structure/screenshot to Gemini.
+5. Receives `username_selector`, `password_selector`, and `login_button_selector`.
+6. Validates all selectors against the live page.
+7. Atomically saves the selectors under the target's `site_key`.
+8. Reuses and re-verifies the learned selectors on later runs.
+
+Credentials are resolved locally and are never sent to Gemini.
+
+## Error logging
+
+`memory/error_log.json` starts as `[]` and is automatically appended when a target, controller, or Telegram-alert operation fails. Entries contain timestamps, stage, site key/URL when available, error text, and a bounded traceback. Credentials are not intentionally recorded.
+
+## Telegram reports
+
+Every completed run sends a human-readable status message followed by JSON details. Target failures are reported individually. Telegram failures are recorded in `memory/error_log.json` without masking the original automation result.
+
+## GitHub Actions
+
+The workflow:
+
+- uses Python 3.11;
+- installs only the dependencies in `requirements.txt`;
+- installs Chromium through Playwright;
+- runs `python scripts/main.py`;
+- maps the three required `AUTO_ASSISTANT_*` secrets;
+- runs manually through `workflow_dispatch` or every 30 minutes;
+- commits `memory/*.json` and `input/targets.json` back to `main` using `stefanzweifel/git-auto-commit-action@v5`.
+
+## First run
+
+The repository currently contains no enabled real target. This is intentional: the automation should not contact a site until an authorized target is configured. After adding an authorized target and any required credential secret mappings, use **GitHub → Actions → AutoAssistantWorkerBot → Run workflow**.
+
+## Dependencies
+
+`requirements.txt` intentionally contains only:
+
+```text
+playwright
+auto requests
+google-generativeai
+```
+
+(The actual file uses pinned-compatible version ranges.) There is no pandas, openpyxl, lxml, Excel input, or Excel report generation in the JSON-first pipeline.
+
+## Security and authorization
+
+Use this worker only for websites and accounts you are authorized to automate. Do not bypass authentication, CAPTCHA, access controls, rate limits, or other security controls. Keep secrets in GitHub Actions Secrets and rotate them through GitHub/Telegram/Gemini provider controls when necessary.
+
+## Operational limitations
+
+- GitHub Actions secrets cannot be dynamically injected from names stored only in `targets.json`; target-specific secrets require explicit workflow mappings.
+- A real end-to-end production run requires valid repository secrets and at least one authorized enabled target.
+- The connected repository tooling can verify repository files and workflow configuration, but a live Actions run is only verifiable when a workflow-dispatch/run capability is available and the run can be inspected.
