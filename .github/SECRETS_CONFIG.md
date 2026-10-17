@@ -2,25 +2,27 @@
 
 This file is a maintenance reference only. **Never place raw API keys, passwords, bot tokens, or chat credentials in this file or anywhere in Git.**
 
-## Required repository secrets
+## Existing repository secrets → runtime environment
 
-The production workflow expects these exact GitHub Actions secret names:
+The repository already uses these GitHub Actions secret names. The workflow maps them to the new JSON-first runtime environment names:
 
-| GitHub Secret | Runtime environment variable | Purpose |
+| Existing GitHub Secret | Runtime environment variable | Purpose |
 |---|---|---|
-| `AUTO_ASSISTANT_BOT_TOKEN` | `AUTO_ASSISTANT_BOT_TOKEN` | Telegram Bot API token |
-| `AUTO_ASSISTANT_CHAT_ID` | `AUTO_ASSISTANT_CHAT_ID` | Telegram destination chat ID |
-| `AUTO_ASSISTANT_GEMINI_API_KEY` | `AUTO_ASSISTANT_GEMINI_API_KEY` | Google Gemini API key |
+| `TELEGRAM_BOT_TOKEN` | `AUTO_ASSISTANT_BOT_TOKEN` | Telegram Bot API token |
+| `TELEGRAM_CHAT_ID` | `AUTO_ASSISTANT_CHAT_ID` | Telegram destination chat ID |
+| `GEMINI_API_KEY` | `AUTO_ASSISTANT_GEMINI_API_KEY` | Google Gemini API key |
+
+The source secret names above are used only in the GitHub Actions expression. Python code reads only the `AUTO_ASSISTANT_*` runtime names.
 
 ## Workflow mapping
 
-`.github/workflows/bot_runner.yml` maps the repository secrets directly into the Python process:
+`.github/workflows/bot_runner.yml` performs the mapping without exposing secret values:
 
 ```yaml
 env:
-  AUTO_ASSISTANT_BOT_TOKEN: ${{ secrets.AUTO_ASSISTANT_BOT_TOKEN }}
-  AUTO_ASSISTANT_CHAT_ID: ${{ secrets.AUTO_ASSISTANT_CHAT_ID }}
-  AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.AUTO_ASSISTANT_GEMINI_API_KEY }}
+  AUTO_ASSISTANT_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  AUTO_ASSISTANT_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 ```
 
 ## Target-specific login credentials
@@ -37,6 +39,12 @@ For a target that requires authentication, `input/targets.json` should reference
 
 Those additional secrets must be explicitly mapped into the workflow `env:` block because GitHub Actions does not dynamically expose arbitrary secret names referenced by JSON. Do not put their raw values in `targets.json`.
 
-## Legacy names
+## Runtime naming rule
 
-The old runtime names `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `GEMINI_API_KEY` are not used by the JSON-first pipeline. The required runtime names are the `AUTO_ASSISTANT_*` names documented above.
+Do not change the Python runtime variables back to the legacy names. The JSON-first code intentionally reads only:
+
+- `AUTO_ASSISTANT_BOT_TOKEN`
+- `AUTO_ASSISTANT_CHAT_ID`
+- `AUTO_ASSISTANT_GEMINI_API_KEY`
+
+No confidential raw value belongs in this file, `README.md`, `targets.json`, or any Python source file.
