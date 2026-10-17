@@ -1,52 +1,49 @@
 # AutoAssistantWorkerBot
 
-JSON-first GitHub Actions automation worker for authorized website automation. The worker uses Playwright for browsing, Gemini for login-selector discovery, JSON for target configuration and learned memory, and Telegram for execution reports and alerts.
+JSON-first GitHub Actions automation worker for websites and accounts the operator is authorized to automate. It uses Playwright for browser execution, Gemini for login-selector discovery, JSON for target configuration and learned memory, and Telegram for run reports.
 
-## Architecture
+## Repository layout
 
 ```text
 .github/
-├── SECRETS_CONFIG.md          # exact GitHub-secret → runtime mapping
+├── SECRETS_CONFIG.md
 └── workflows/
-    └── bot_runner.yml         # manual + 30-minute scheduled execution
-
+    └── bot_runner.yml
 input/
-└── targets.json               # target URLs, login configuration and task parameters
-
+└── targets.json
 memory/
-├── brain.json                 # learned login selectors and verification metadata
-└── error_log.json             # persistent credential-free execution errors
-
+├── brain.json
+└── error_log.json
 scripts/
-├── main.py                    # orchestration and process exit status
-├── scraper.py                 # Playwright JSON-first automation engine
-├── ai_parser.py               # Gemini selector discovery
-└── notifier.py                # Telegram reporting and error persistence
-
-requirements.txt               # Playwright + requests + Gemini only
+├── main.py
+├── scraper.py
+├── ai_parser.py
+└── notifier.py
+requirements.txt
 ```
 
-## Existing GitHub Secrets → runtime mapping
+## Required GitHub Repository Secrets
 
-The repository's existing secret names remain unchanged. GitHub Actions maps them to the new runtime environment names:
+Create these exact names under **Settings → Secrets and variables → Actions → Repository secrets**:
 
-| Existing GitHub Secret | Runtime environment | Purpose |
-|---|---|---|
-| `TELEGRAM_BOT_TOKEN` | `AUTO_ASSISTANT_BOT_TOKEN` | Telegram Bot API token |
-| `TELEGRAM_CHAT_ID` | `AUTO_ASSISTANT_CHAT_ID` | Telegram destination chat ID |
-| `GEMINI_API_KEY` | `AUTO_ASSISTANT_GEMINI_API_KEY` | Google Gemini API key |
+| Secret name | Purpose |
+|---|---|
+| `AUTO_ASSISTANT_BOT_TOKEN` | Telegram Bot API token |
+| `AUTO_ASSISTANT_CHAT_ID` | Telegram destination chat ID |
+| `AUTO_ASSISTANT_GEMINI_API_KEY` | Google Gemini API key |
 
-The detailed maintenance reference is `.github/SECRETS_CONFIG.md`. **Never commit raw secret values.**
+The workflow maps each secret directly to the runtime environment variable of the same name. It also checks that all three values are injected without printing them. This check confirms non-empty values only, not credential validity. Never commit secret values.
 
 Optional repository variable:
+- `GEMINI_MODEL` — Gemini model name; the code defaults to `gemini-2.0-flash`.
 
-- `GEMINI_MODEL` — model name; defaults to `gemini-2.0-flash`.
+See [Secret Configuration](.github/SECRETS_CONFIG.md) for validation details.
 
 ## Target configuration
 
-`input/targets.json` is a JSON array. The repository starts with a disabled public `example.com` target so scheduled runs do not contact an unintended website.
+`input/targets.json` is a JSON array. The repository starts with a disabled public `https://example.com` target so scheduled runs do not contact an unintended website.
 
-Example authorized target:
+Example for an authorized target:
 
 ```json
 [
@@ -69,92 +66,52 @@ Example authorized target:
 ]
 ```
 
-Supported extraction modes are `text`, `html`, and `links`. If `data_selector` is empty, the worker returns a bounded page-title/body-text record.
-
-### Credentials
-
-Credentials must never be written into `targets.json`. Store them as GitHub Actions secrets and reference their environment-variable names through `username_env` and `password_env`.
-
-GitHub Actions cannot dynamically expose arbitrary secret names referenced by JSON. Therefore, each target-specific credential secret must be explicitly mapped in `.github/workflows/bot_runner.yml`.
+Supported extraction modes are `text`, `html`, and `links`. If `data_selector` is empty, the worker returns a bounded page-title/body-text record. Login credentials belong in GitHub Actions Secrets and must be mapped explicitly into the workflow environment.
 
 ## Safe live smoke test
 
-The manual workflow now has a **Smoke test** input. Set it to `true` when you want to validate the full GitHub Actions orchestration and Playwright browser path without configuring a real target. It uses only the public `https://example.com` page, does not log in, and does not use Gemini for selector discovery.
+The manual workflow provides a **Smoke test** input. Set it to `true) to validate the GitHub Actions execution path against the public `https://example.com` page. It does not log in to a real target and does not call Gemini for selector discovery.
 
-This is the recommended first live test because it validates:
-
-1. GitHub Actions dispatch and permissions.
-2. Python 3.11 setup and dependency installation.
+The run checks:
+1. Python 3.11 setup and dependency installation.
+2. Presence of the three required repository secrets (values are never printed).
 3. Playwright Chromium installation.
-4. JSON-first controller/scraper execution.
-5. Telegram report delivery using the existing secret mapping.
-6. Automatic memory/error-log commit behavior.
+4. JSON-first controller and browser execution.
+5. Telegram report delivery.
+6. Commit/push behavior for generated JSON state, when there are changes.
 
-### Run it directly from GitHub
-
+To run it:
 1. Open the repository's **Actions** tab.
 2. Select **AutoAssistantWorkerBot**.
-3. Click **Run workflow**.
-4. Leave branch as `main`.
-5. Set **Smoke test** to **true** for the first live validation.
-6. Click **Run workflow**.
-7. Wait for the run to finish.
-8. Check the Telegram chat configured by `TELEGRAM_CHAT_ID` for the execution report.
+3. Click **Run workflow** and keep branch `main`.
+4. Set **Smoke test** to `true`.
+5. Start the run, then inspect the job logs and Telegram report.
 
-After the smoke test passes, set **Smoke test** to `false` for normal execution against the enabled targets in `input/targets.json`.
+The smoke test checks that the Gemini secret is present, but does **not** validate that the Gemini key is accepted by Google's API. Gemini is called when an enabled login target needs AI selector discovery.
 
 ## Learned selector memory
 
-`memory/brain.json` starts as `{}`. For a login-enabled target without learned selectors, the worker:
+`memory/brain.json` stores learned selectors by `site_key`. For a login-enabled target without saved selectors, the worker sanitizes page DOM metadata, optionally captures a screenshot, asks Gemini for CSS selectors, validates them against the page, saves them, and reuses them on later runs. Credentials are resolved locally and are not intentionally sent to Gemini.
 
-1. Opens the target with Playwright headlessly.
-2. Sanitizes the DOM and removes form values and common token/password attributes before Gemini analysis.
-3. Optionally captures the current page screenshot.
-4. Sends only sanitized page structure/screenshot to Gemini.
-5. Receives `username_selector`, `password_selector`, and `login_button_selector`.
-6. Validates all selectors against the live page.
-7. Atomically saves the selectors under the target's `site_key`.
-8. Reuses and re-verifies the learned selectors on later runs.
+## Error logging and reports
 
-Credentials are resolved locally and are never sent to Gemini.
+`memory/error_log.json` stores bounded execution errors. The notifier sends a human-readable Telegram summary followed by JSON details; target failures and controller errors also produce alerts. Never include raw credentials in target configuration or custom error messages.
 
-## Error logging
+## Workflow behavior
 
-`memory/error_log.json` starts as `[]` and is automatically appended when a target, controller, or Telegram-alert operation fails. Entries contain timestamps, stage, site key/URL when available, error text, and a bounded traceback. Credentials are not intentionally recorded.
+- Python 3.11.
+- Dependencies from `requirements.txt`: Playwright, Requests, and the current Google GenAI SDK.
+- Manual `workflow_dispatch` with a safe smoke-test switch.
+- Scheduled execution every 30 minutes.
+- Direct secret-name mapping using the three `AUTO_ASSISTANT_*` names.
+- A serialized workflow group to reduce concurrent writes.
+- A retrying Git push that fetches and rebases onto the latest `main` after a non-fast-forward rejection.
+- Only `memory/*.json` and `input/targets.json` are staged by the generated-state commit step.
 
-## Telegram reports
+## Safety and authorization
 
-Every completed run sends a human-readable status message followed by JSON details. Target failures are reported individually. Telegram failures are recorded in `memory/error_log.json` without masking the original automation result.
+Use this worker only on websites/accounts you are authorized to automate. Do not bypass authentication challenges, CAPTCHAs, access controls, rate limits, or other security measures.
 
-## GitHub Actions
+## Verification status
 
-The workflow:
-
-- uses Python 3.11;
-- installs only the dependencies in `requirements.txt`;
-- installs Chromium through Playwright;
-- runs `python scripts/main.py`;
-- maps the existing `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `GEMINI_API_KEY` secrets into the new `AUTO_ASSISTANT_*` runtime variables;
-- supports manual `workflow_dispatch` with the safe smoke-test switch;
-- runs every 30 minutes on the configured target set;
-- commits `memory/*.json` and `input/targets.json` back to `main` using `stefanzweifel/git-auto-commit-action@v5`.
-
-## Dependencies
-
-`requirements.txt` intentionally contains only:
-
-```text
-playwright
-requests
-google-generativeai
-```
-
-The actual file uses pinned-compatible version ranges. There is no pandas, openpyxl, lxml, Excel input, or Excel report generation in the JSON-first pipeline.
-
-## Security and authorization
-
-Use this worker only for websites and accounts you are authorized to automate. Do not bypass authentication, CAPTCHA, access controls, rate limits, or other security controls. Keep secrets in GitHub Actions Secrets and rotate them through GitHub/provider controls when necessary.
-
-## Current verification status
-
-Repository configuration and source files are prepared for a manual live run. A GitHub Actions run has **not** yet been dispatched from the connected tooling, so no claim of a successful live production execution is made until the first manual run completes and its job logs are inspected.
+The workflow and documentation are committed to `main`. A successful live run must still be confirmed from the Actions run and Telegram report; a code commit alone is not proof of successful execution.
