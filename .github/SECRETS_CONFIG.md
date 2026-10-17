@@ -1,33 +1,36 @@
-# AutoAssistantWorkerBot — Secret Configuration
+# AutoAssistantWorkerBot — Repository Secret Configuration
 
-This file is a maintenance reference only. **Never place raw API keys, passwords, bot tokens, or chat credentials in this file or anywhere in Git.**
+Keep the following three secrets in **Settings → Secrets and variables → Actions → Repository secrets**. The workflow now reads these exact names directly.
 
-## Existing repository secrets → runtime environment
-
-The repository already uses these GitHub Actions secret names. The workflow maps them to the new JSON-first runtime environment names:
-
-| Existing GitHub Secret | Runtime environment variable | Purpose |
+| Repository Secret name | Runtime environment variable | Used for |
 |---|---|---|
-| `TELEGRAM_BOT_TOKEN` | `AUTO_ASSISTANT_BOT_TOKEN` | Telegram Bot API token |
-| `TELEGRAM_CHAT_ID` | `AUTO_ASSISTANT_CHAT_ID` | Telegram destination chat ID |
-| `GEMINI_API_KEY` | `AUTO_ASSISTANT_GEMINI_API_KEY` | Google Gemini API key |
+| `AUTO_ASSISTANT_BOT_TOKEN` | `AUTO_ASSISTANT_BOT_TOKEN` | Telegram Bot API token |
+| `AUTO_ASSISTANT_CHAT_ID` | `AUTO_ASSISTANT_CHAT_ID` | Telegram destination chat ID |
+| `AUTO_ASSISTANT_GEMINI_API_KEY` | `AUTO_ASSISTANT_GEMINI_API_KEY` | Google Gemini API key |
 
-The source secret names above are used only in the GitHub Actions expression. Python code reads only the `AUTO_ASSISTANT_*` runtime names.
+The names must match exactly. Do not use the legacy names `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, or `GEMINI_API_KEY` unless the workflow is deliberately changed to map from them.
 
-## Workflow mapping
+## Runtime validation
 
-`.github/workflows/bot_runner.yml` performs the mapping without exposing secret values:
+The workflow's **Validate secret injection (presence only)** step checks that all three environment variables are non-empty without printing their values. This confirms injection/presence only; it does not prove that the credentials are valid.
 
-```yaml
-env:
-  AUTO_ASSISTANT_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-  AUTO_ASSISTANT_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-  AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-```
+- Telegram token and chat ID are tested when the run sends its Telegram report.
+- The Gemini key is used for AI selector discovery on login-enabled targets when selectors have not already been learned. The public smoke test does not make a Gemini API request, so it does not validate that key against Google's API.
+
+## Safe live smoke test
+
+1. Open the repository's Actions tab.
+2. Select **AutoAssistantWorkerBot**.
+3. Click **Run workflow** on branch `main`.
+4. Set **Smoke test** to `true`.
+5. Start the run and inspect each step.
+6. Confirm that a success report arrives in the Telegram chat configured by `AUTO_ASSISTANT_CHAT_ID`.
+
+The smoke test visits only `https://example.com`; it does not log into a real target.
 
 ## Target-specific login credentials
 
-For a target that requires authentication, `input/targets.json` should reference environment-variable names rather than storing credentials:
+For an authorized target that requires login, `input/targets.json` should reference environment variable names instead of containing credentials:
 
 ```json
 "login": {
@@ -37,14 +40,10 @@ For a target that requires authentication, `input/targets.json` should reference
 }
 ```
 
-Those additional secrets must be explicitly mapped into the workflow `env:` block because GitHub Actions does not dynamically expose arbitrary secret names referenced by JSON. Do not put their raw values in `targets.json`.
+Target-specific username/password secrets must also be explicitly mapped in the workflow's `env:` block. Never commit secret values to this repository.
 
-## Runtime naming rule
+## Security rules
 
-Do not change the Python runtime variables back to the legacy names. The JSON-first code intentionally reads only:
-
-- `AUTO_ASSISTANT_BOT_TOKEN`
-- `AUTO_ASSISTANT_CHAT_ID`
-- `AUTO_ASSISTANT_GEMINI_API_KEY`
-
-No confidential raw value belongs in this file, `README.md`, `targets.json`, or any Python source file.
+- Never write raw tokens, API keys, chat IDs that are confidential, or passwords in source files, logs, or documentation.
+- Never print secret values in workflow logs.
+- If a credential is exposed, revoke/rotate it with its provider.
