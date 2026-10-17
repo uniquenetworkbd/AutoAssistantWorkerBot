@@ -45,17 +45,31 @@ jobs:
 
       - name: Run JSON-first automation
         env:
-          AUTO_ASSISTANT_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          AUTO_ASSISTANT_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AUTO_ASSISTANT_BOT_TOKEN: ${{ secrets.AUTO_ASSISTANT_BOT_TOKEN }}
+          AUTO_ASSISTANT_CHAT_ID: ${{ secrets.AUTO_ASSISTANT_CHAT_ID }}
+          AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.AUTO_ASSISTANT_GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           AUTO_ASSISTANT_SMOKE_TEST: ${{ inputs.smoke_test || false }}
         run: python scripts/main.py
+
+      - name: Rebase workspace onto latest main before auto-commit
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Preserve generated JSON/memory changes while synchronizing the base branch.
+          git stash push --include-untracked --message "workflow-generated-changes-before-rebase" || true
+          git fetch origin main
+          git rebase origin/main
+          if git stash list --format='%s' | grep -Fxq "workflow-generated-changes-before-rebase"; then
+            git stash pop
+          fi
 
       - name: Commit learned memory and target configuration
         if: always()
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: update automation memory"
+          commit_message: "chore: update automation memory [skip ci]"
           file_pattern: "memory/*.json input/targets.json"
           branch: main
+          skip_dirty_check: false
