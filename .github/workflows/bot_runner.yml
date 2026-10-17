@@ -39,9 +39,9 @@ jobs:
 
       - name: Run JSON-first automation
         env:
-          AUTO_ASSISTANT_BOT_TOKEN: ${{ secrets.AUTO_ASSISTANT_BOT_TOKEN }}
-          AUTO_ASSISTANT_CHAT_ID: ${{ secrets.AUTO_ASSISTANT_CHAT_ID }}
-          AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.AUTO_ASSISTANT_GEMINI_API_KEY }}
+          AUTO_ASSISTANT_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          AUTO_ASSISTANT_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
         run: python scripts/main.py
 
