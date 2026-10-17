@@ -63,23 +63,25 @@ def send_report(report: dict[str, Any]) -> None:
         f"Failed: {report.get('failure_count', 0)}"
     )
     details = json.dumps(report, indent=2, ensure_ascii=False)
-    message = f"{summary}\n\n<pre>{details}</pre>"
-    # Telegram messages are limited to 4096 characters. Send summary first and JSON chunks after it.
-    _telegram("sendMessage", data={"chat_id": os.environ["AUTO_ASSISTANT_CHAT_ID"], "text": summary})
+    _telegram("sendMessage", data={"chat_id": chat_id(), "text": summary})
+    # Telegram messages are limited to 4096 characters.
     for offset in range(0, len(details), 3900):
-        chunk = details[offset : offset + 3900]
         _telegram(
             "sendMessage",
-            data={"chat_id": os.environ["AUTO_ASSISTANT_CHAT_ID"], "text": f"<pre>{chunk}</pre>"},
+            data={"chat_id": chat_id(), "text": details[offset : offset + 3900]},
         )
+
+
+def chat_id() -> str:
+    value = os.getenv("AUTO_ASSISTANT_CHAT_ID", "")
+    if not value:
+        raise RuntimeError("AUTO_ASSISTANT_CHAT_ID is required")
+    return value
 
 
 def send_alert(message: str) -> None:
     """Send an alert without masking the original workflow failure."""
     try:
-        _telegram(
-            "sendMessage",
-            data={"chat_id": os.environ.get("AUTO_ASSISTANT_CHAT_ID", ""), "text": message[:4096]},
-        )
+        _telegram("sendMessage", data={"chat_id": chat_id(), "text": message[:4096]})
     except Exception as exc:
         record_error("telegram_alert", exc)
