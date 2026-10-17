@@ -57,12 +57,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Preserve generated JSON/memory changes while synchronizing the base branch.
-          git stash push --include-untracked --message "workflow-generated-changes-before-rebase" || true
+          # Stash only when this run actually has workspace changes.
+          stash_ref=""
+          if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+            git stash push --include-untracked --message "workflow-generated-changes-before-rebase"
+            stash_ref="$(git rev-parse -q --verify refs/stash || true)"
+          fi
           git fetch origin main
           git rebase origin/main
-          if git stash list --format='%s' | grep -Fxq "workflow-generated-changes-before-rebase"; then
-            git stash pop
+          # Restore this run's stash only; never pop an unrelated older stash.
+          if [ -n "$stash_ref" ] && [ "$(git rev-parse -q --verify refs/stash || true)" = "$stash_ref" ]; then
+            git stash pop "$stash_ref"
           fi
 
       - name: Commit learned memory and target configuration
