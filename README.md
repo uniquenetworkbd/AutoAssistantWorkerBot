@@ -70,7 +70,7 @@ Supported extraction modes are `text`, `html`, and `links`. If `data_selector` i
 
 ## Safe live smoke test
 
-The manual workflow provides a **Smoke test** input. Set it to `true) to validate the GitHub Actions execution path against the public `https://example.com` page. It does not log in to a real target and does not call Gemini for selector discovery.
+The manual workflow provides a **Smoke test** input. Set it to `true` to validate the GitHub Actions execution path against the public `https://example.com` page. It does not log in to a real target and does not call Gemini for selector discovery.
 
 The run checks:
 1. Python 3.11 setup and dependency installation.
