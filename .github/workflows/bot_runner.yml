@@ -25,12 +25,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Setup Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
@@ -52,29 +52,39 @@ jobs:
           AUTO_ASSISTANT_SMOKE_TEST: ${{ inputs.smoke_test || false }}
         run: python scripts/main.py
 
-      - name: Rebase workspace onto latest main before auto-commit
+      # Stage only the intended generated state, commit locally, and retry a
+      # non-fast-forward push by rebasing onto the newest main. The workflow
+      # concurrency group prevents two copies of this workflow racing each other.
+      - name: Commit and push generated state with retry
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          # Stash only when this run actually has workspace changes.
-          stash_ref=""
-          if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
-            git stash push --include-untracked --message "workflow-generated-changes-before-rebase"
-            stash_ref="$(git rev-parse -q --verify refs/stash || true)"
-          fi
-          git fetch origin main
-          git rebase origin/main
-          # Restore this run's stash only; never pop an unrelated older stash.
-          if [ -n "$stash_ref" ] && [ "$(git rev-parse -q --verify refs/stash || true)" = "$stash_ref" ]; then
-            git stash pop "$stash_ref"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -- memory/*.json input/targets.json
+          if git diff --cached --quiet; then
+            echo "No generated state changes to commit."
+            exit 0
           fi
 
-      - name: Commit learned memory and target configuration
-        if: always()
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: update automation memory [skip ci]"
-          file_pattern: "memory/*.json input/targets.json"
-          branch: main
-          skip_dirty_check: false
+          git commit -m "chore: update automation memory [skip ci]"
+
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              echo "Generated state pushed successfully on attempt ${attempt}."
+              exit 0
+            fi
+
+            echo "Push attempt ${attempt} was rejected; fetching latest main."
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              echo "::error::Could not rebase generated state cleanly onto origin/main."
+              exit 1
+            fi
+          done
+
+          echo "::error::Push failed after 5 attempts."
+          exit 1
