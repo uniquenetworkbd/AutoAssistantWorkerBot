@@ -2,6 +2,12 @@ name: AutoAssistantWorkerBot
 
 on:
   workflow_dispatch:
+    inputs:
+      smoke_test:
+        description: "Run a safe public example.com Playwright smoke test instead of configured targets"
+        required: true
+        default: false
+        type: boolean
   schedule:
     - cron: "*/30 * * * *"
 
@@ -43,6 +49,7 @@ jobs:
           AUTO_ASSISTANT_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          AUTO_ASSISTANT_SMOKE_TEST: ${{ inputs.smoke_test || false }}
         run: python scripts/main.py
 
       - name: Commit learned memory and target configuration
