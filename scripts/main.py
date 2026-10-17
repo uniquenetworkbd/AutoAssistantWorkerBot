@@ -1,6 +1,7 @@
 """Master controller for AutoAssistantWorkerBot."""
 from __future__ import annotations
 
+import os
 import traceback
 from datetime import datetime, timezone
 
@@ -8,10 +9,15 @@ from notifier import record_error, send_alert, send_report
 from scraper import run
 
 
+def _truthy(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def main() -> int:
     started = datetime.now(timezone.utc)
+    smoke_test = _truthy(os.getenv("AUTO_ASSISTANT_SMOKE_TEST"))
     try:
-        report = run()
+        report = run(smoke_test=smoke_test)
         for target in report.get("targets", []):
             if target.get("status") != "success":
                 record_error(
