@@ -6,7 +6,7 @@ JSON-first GitHub Actions automation worker for authorized website automation. T
 
 ```text
 .github/
-├── SECRETS_CONFIG.md          # exact secret-name mapping; never stores raw secrets
+├── SECRETS_CONFIG.md          # exact GitHub-secret → runtime mapping
 └── workflows/
     └── bot_runner.yml         # manual + 30-minute scheduled execution
 
@@ -24,7 +24,6 @@ scripts/
 └── notifier.py                # Telegram reporting and error persistence
 
 requirements.txt               # Playwright + requests + Gemini only
-reports/                       # optional local/generated reports; ignored by Git
 ```
 
 ## Existing GitHub Secrets → runtime mapping
@@ -45,9 +44,9 @@ Optional repository variable:
 
 ## Target configuration
 
-`input/targets.json` is a JSON array. A safe disabled starter target is included so the repository can be installed and validated without attempting an unauthorized website.
+`input/targets.json` is a JSON array. The repository starts with a disabled public `example.com` target so scheduled runs do not contact an unintended website.
 
-Example:
+Example authorized target:
 
 ```json
 [
@@ -76,20 +75,40 @@ Supported extraction modes are `text`, `html`, and `links`. If `data_selector` i
 
 Credentials must never be written into `targets.json`. Store them as GitHub Actions secrets and reference their environment-variable names through `username_env` and `password_env`.
 
-GitHub Actions cannot dynamically expose arbitrary secret names referenced by JSON. Therefore, each target-specific credential secret must be explicitly mapped in `.github/workflows/bot_runner.yml`, for example:
+GitHub Actions cannot dynamically expose arbitrary secret names referenced by JSON. Therefore, each target-specific credential secret must be explicitly mapped in `.github/workflows/bot_runner.yml`.
 
-```yaml
-env:
-  EXAMPLE_USERNAME: ${{ secrets.EXAMPLE_USERNAME }}
-  EXAMPLE_PASSWORD: ${{ secrets.EXAMPLE_PASSWORD }}
-```
+## Safe live smoke test
+
+The manual workflow now has a **Smoke test** input. Set it to `true` when you want to validate the full GitHub Actions orchestration and Playwright browser path without configuring a real target. It uses only the public `https://example.com` page, does not log in, and does not use Gemini for selector discovery.
+
+This is the recommended first live test because it validates:
+
+1. GitHub Actions dispatch and permissions.
+2. Python 3.11 setup and dependency installation.
+3. Playwright Chromium installation.
+4. JSON-first controller/scraper execution.
+5. Telegram report delivery using the existing secret mapping.
+6. Automatic memory/error-log commit behavior.
+
+### Run it directly from GitHub
+
+1. Open the repository's **Actions** tab.
+2. Select **AutoAssistantWorkerBot**.
+3. Click **Run workflow**.
+4. Leave branch as `main`.
+5. Set **Smoke test** to **true** for the first live validation.
+6. Click **Run workflow**.
+7. Wait for the run to finish.
+8. Check the Telegram chat configured by `TELEGRAM_CHAT_ID` for the execution report.
+
+After the smoke test passes, set **Smoke test** to `false` for normal execution against the enabled targets in `input/targets.json`.
 
 ## Learned selector memory
 
 `memory/brain.json` starts as `{}`. For a login-enabled target without learned selectors, the worker:
 
 1. Opens the target with Playwright headlessly.
-2. Sanitizes the DOM and removes form values and common token/password attributes.
+2. Sanitizes the DOM and removes form values and common token/password attributes before Gemini analysis.
 3. Optionally captures the current page screenshot.
 4. Sends only sanitized page structure/screenshot to Gemini.
 5. Receives `username_selector`, `password_selector`, and `login_button_selector`.
@@ -116,12 +135,9 @@ The workflow:
 - installs Chromium through Playwright;
 - runs `python scripts/main.py`;
 - maps the existing `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `GEMINI_API_KEY` secrets into the new `AUTO_ASSISTANT_*` runtime variables;
-- runs manually through `workflow_dispatch` or every 30 minutes;
+- supports manual `workflow_dispatch` with the safe smoke-test switch;
+- runs every 30 minutes on the configured target set;
 - commits `memory/*.json` and `input/targets.json` back to `main` using `stefanzweifel/git-auto-commit-action@v5`.
-
-## First run
-
-The repository currently contains no enabled real target. This is intentional: the automation should not contact a site until an authorized target is configured. After adding an authorized target and any required credential secret mappings, use **GitHub → Actions → AutoAssistantWorkerBot → Run workflow**.
 
 ## Dependencies
 
@@ -133,14 +149,12 @@ requests
 google-generativeai
 ```
 
-(The actual file uses pinned-compatible version ranges.) There is no pandas, openpyxl, lxml, Excel input, or Excel report generation in the JSON-first pipeline.
+The actual file uses pinned-compatible version ranges. There is no pandas, openpyxl, lxml, Excel input, or Excel report generation in the JSON-first pipeline.
 
 ## Security and authorization
 
 Use this worker only for websites and accounts you are authorized to automate. Do not bypass authentication, CAPTCHA, access controls, rate limits, or other security controls. Keep secrets in GitHub Actions Secrets and rotate them through GitHub/provider controls when necessary.
 
-## Operational limitations
+## Current verification status
 
-- GitHub Actions secrets cannot be dynamically injected from names stored only in `targets.json`; target-specific secrets require explicit workflow mappings.
-- A real end-to-end production run requires valid repository secrets and at least one authorized enabled target.
-- The connected repository tooling can verify repository files and workflow configuration, but a live Actions run is only verifiable when a workflow-dispatch/run capability is available and the run can be inspected.
+Repository configuration and source files are prepared for a manual live run. A GitHub Actions run has **not** yet been dispatched from the connected tooling, so no claim of a successful live production execution is made until the first manual run completes and its job logs are inspected.
