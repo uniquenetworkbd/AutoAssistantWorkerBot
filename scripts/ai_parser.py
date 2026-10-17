@@ -10,7 +10,8 @@ import os
 import re
 from typing import Any
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 
 class AIParserError(RuntimeError):
@@ -50,9 +51,8 @@ def detect_login_selectors(html: str, screenshot_bytes: bytes | None = None) -> 
     if not api_key:
         raise AIParserError("AUTO_ASSISTANT_GEMINI_API_KEY is not configured")
 
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
     model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-    model = genai.GenerativeModel(model_name)
     prompt = """You are a web-automation selector analyst.
 Inspect the supplied login-page DOM and return ONLY valid JSON with exactly:
 username_selector, password_selector, login_button_selector.
@@ -65,9 +65,11 @@ DOM:
 
     contents: list[Any] = [prompt]
     if screenshot_bytes:
-        contents.append({"mime_type": "image/png", "data": screenshot_bytes})
+        contents.append(types.Part.from_bytes(data=screenshot_bytes, mime_type="image/png"))
     try:
-        response = model.generate_content(contents)
+        response = client.models.generate_content(model=model_name, contents=contents)
+        if not response.text:
+            raise AIParserError("Gemini returned an empty response")
         return _clean_response(response.text)
     except AIParserError:
         raise
