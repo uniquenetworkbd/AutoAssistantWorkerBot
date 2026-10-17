@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "timestamp": "2026-10-17T19:39:00.646405+00:00",
+    "stage": "master_controller",
+    "site_key": null,
+    "url": null,
+    "error": "AUTO_ASSISTANT_CHAT_ID is required",
+    "traceback": "Traceback (most recent call last):\n  File \"/home/runner/work/AutoAssistantWorkerBot/AutoAssistantWorkerBot/scripts/main.py\", line 30, in main\n    send_report(report)\n  File \"/home/runner/work/AutoAssistantWorkerBot/AutoAssistantWorkerBot/scripts/notifier.py\", line 66, in send_report\n    _telegram(\"sendMessage\", data={\"chat_id\": chat_id(), \"text\": summary})\n                                              ^^^^^^^^^\n  File \"/home/runner/work/AutoAssistantWorkerBot/AutoAssistantWorkerBot/scripts/notifier.py\", line 78, in chat_id\n    raise RuntimeError(\"AUTO_ASSISTANT_CHAT_ID is required\")\nRuntimeError: AUTO_ASSISTANT_CHAT_ID is required\n"
+  },
+  {
+    "timestamp": "2026-10-17T19:39:00.647683+00:00",
+    "stage": "telegram_alert",
+    "site_key": null,
+    "url": null,
+    "error": "AUTO_ASSISTANT_CHAT_ID is required",
+    "traceback": "Traceback (most recent call last):\n  File \"/home/runner/work/AutoAssistantWorkerBot/AutoAssistantWorkerBot/scripts/main.py\", line 30, in main\n    send_report(report)\n  File \"/home/runner/work/AutoAssistantWorkerBot/AutoAssistantWorkerBot/scripts/notifier.py\", line 66, in send_report\n    _telegram(\"sendMessage\", data={\"chat_id\": chat_id(), \"text\": summary})\n                                              ^^^^^^^^^\n  File \"/home/runner/work/AutoAssistantWorkerBot/AutoAssistantWorkerBot/scripts/notifier.py\", line 78, in chat_id\n    raise RuntimeError(\"AUTO_ASSISTANT_CHAT_ID is required\")\nRuntimeError: AUTO_ASSISTANT_CHAT_ID is required\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/runner/work/AutoAssistantWorkerBot/AutoAssistantWorkerBot/scripts/notifier.py\", line 85, in send_alert\n    _telegram(\"sendMessage\", data={\"chat_id\": chat_id(), \"text\": message[:4096]})\n                                              ^^^^^^^^^\n  File \"/home/runner/work/AutoAssistantWorkerBot/AutoAssistantWorkerBot/scripts/notifier.py\", line 78, in chat_id\n    raise RuntimeError(\"AUTO_ASSISTANT_CHAT_ID is required\")\nRuntimeError: AUTO_ASSISTANT_CHAT_ID is required\n"
+  }
+]
