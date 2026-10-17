@@ -20,10 +20,20 @@ def main() -> int:
                     site_key=target.get("site_key"),
                     url=target.get("url"),
                 )
+
         send_report(report)
-        print(f"{report.get('status', 'unknown').upper()}: {report}")
+        status = report.get("status", "unknown")
+        print(f"{status.upper()}: {report}")
         print(f"Started: {started.isoformat()}  Finished: {datetime.now(timezone.utc).isoformat()}")
-        return 0 if report.get("status") in {"success", "partial"} else 1
+
+        if status != "success":
+            send_alert(
+                f"AutoAssistantWorkerBot {status.upper()}\n"
+                f"Successful targets: {report.get('success_count', 0)}\n"
+                f"Failed targets: {report.get('failure_count', 0)}"
+            )
+            return 1
+        return 0
     except Exception as exc:
         record_error("master_controller", exc)
         message = "AutoAssistantWorkerBot FAILED\n\n" + str(exc) + "\n\n" + traceback.format_exc(limit=10)
