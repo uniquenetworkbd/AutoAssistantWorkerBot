@@ -1,0 +1,1 @@
+The workbook at input/targets.xlsx is a starter configuration. Required: url. Optional: login_required, username, password, table_selector. For credentials, put GitHub secret/variable names in username/password rather than real values. See README.md and targets.xlsx.template.md.
