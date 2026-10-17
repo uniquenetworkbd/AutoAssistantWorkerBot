@@ -40,6 +40,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Validate secret injection (presence only)
+        env:
+          AUTO_ASSISTANT_BOT_TOKEN: ${{ secrets.AUTO_ASSISTANT_BOT_TOKEN }}
+          AUTO_ASSISTANT_CHAT_ID: ${{ secrets.AUTO_ASSISTANT_CHAT_ID }}
+          AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.AUTO_ASSISTANT_GEMINI_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in AUTO_ASSISTANT_BOT_TOKEN AUTO_ASSISTANT_CHAT_ID AUTO_ASSISTANT_GEMINI_API_KEY; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Required repository secret is missing or empty: ${name}"
+              missing=1
+            else
+              echo "Secret injection present: ${name}"
+            fi
+          done
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
+
       - name: Install Playwright Chromium
         run: python -m playwright install --with-deps chromium
 
@@ -52,9 +73,7 @@ jobs:
           AUTO_ASSISTANT_SMOKE_TEST: ${{ inputs.smoke_test || false }}
         run: python scripts/main.py
 
-      # Stage only the intended generated state, commit locally, and retry a
-      # non-fast-forward push by rebasing onto the newest main. The workflow
-      # concurrency group prevents two copies of this workflow racing each other.
+      # Stage only intended generated state and retry pushes after rebasing on main.
       - name: Commit and push generated state with retry
         if: always()
         shell: bash
