@@ -1,0 +1,13 @@
+{
+  "targets": [
+    {
+      "site_key": "example",
+      "enabled": false,
+      "url": "https://example.com",
+      "login_required": false,
+      "username": "",
+      "password": "",
+      "data_selector": ""
+    }
+  ]
+}
