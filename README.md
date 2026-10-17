@@ -6,7 +6,7 @@ JSON-first GitHub Actions automation worker for authorized website automation. T
 
 ```text
 .github/
-├── SECRETS_CONFIG.md          # secret-name reference; never stores raw secrets
+├── SECRETS_CONFIG.md          # exact secret-name mapping; never stores raw secrets
 └── workflows/
     └── bot_runner.yml         # manual + 30-minute scheduled execution
 
@@ -27,13 +27,15 @@ requirements.txt               # Playwright + requests + Gemini only
 reports/                       # optional local/generated reports; ignored by Git
 ```
 
-## Required GitHub Secrets
+## Existing GitHub Secrets → runtime mapping
 
-The workflow uses these exact repository secret names:
+The repository's existing secret names remain unchanged. GitHub Actions maps them to the new runtime environment names:
 
-- `AUTO_ASSISTANT_BOT_TOKEN`
-- `AUTO_ASSISTANT_CHAT_ID`
-- `AUTO_ASSISTANT_GEMINI_API_KEY`
+| Existing GitHub Secret | Runtime environment | Purpose |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | `AUTO_ASSISTANT_BOT_TOKEN` | Telegram Bot API token |
+| `TELEGRAM_CHAT_ID` | `AUTO_ASSISTANT_CHAT_ID` | Telegram destination chat ID |
+| `GEMINI_API_KEY` | `AUTO_ASSISTANT_GEMINI_API_KEY` | Google Gemini API key |
 
 The detailed maintenance reference is `.github/SECRETS_CONFIG.md`. **Never commit raw secret values.**
 
@@ -82,8 +84,6 @@ env:
   EXAMPLE_PASSWORD: ${{ secrets.EXAMPLE_PASSWORD }}
 ```
 
-The three required AutoAssistant secrets are already mapped by the workflow.
-
 ## Learned selector memory
 
 `memory/brain.json` starts as `{}`. For a login-enabled target without learned selectors, the worker:
@@ -115,7 +115,7 @@ The workflow:
 - installs only the dependencies in `requirements.txt`;
 - installs Chromium through Playwright;
 - runs `python scripts/main.py`;
-- maps the three required `AUTO_ASSISTANT_*` secrets;
+- maps the existing `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `GEMINI_API_KEY` secrets into the new `AUTO_ASSISTANT_*` runtime variables;
 - runs manually through `workflow_dispatch` or every 30 minutes;
 - commits `memory/*.json` and `input/targets.json` back to `main` using `stefanzweifel/git-auto-commit-action@v5`.
 
@@ -137,7 +137,7 @@ google-generativeai
 
 ## Security and authorization
 
-Use this worker only for websites and accounts you are authorized to automate. Do not bypass authentication, CAPTCHA, access controls, rate limits, or other security controls. Keep secrets in GitHub Actions Secrets and rotate them through GitHub/Telegram/Gemini provider controls when necessary.
+Use this worker only for websites and accounts you are authorized to automate. Do not bypass authentication, CAPTCHA, access controls, rate limits, or other security controls. Keep secrets in GitHub Actions Secrets and rotate them through GitHub/provider controls when necessary.
 
 ## Operational limitations
 
