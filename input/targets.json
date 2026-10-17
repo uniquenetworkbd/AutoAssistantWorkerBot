@@ -1,13 +1,18 @@
-{
-  "targets": [
-    {
-      "site_key": "example",
-      "enabled": false,
-      "url": "https://example.com",
-      "login_required": false,
-      "username": "",
-      "password": "",
-      "data_selector": ""
+[
+  {
+    "site_key": "example",
+    "enabled": false,
+    "target_url": "https://example.com",
+    "login": {
+      "required": false,
+      "username_env": "",
+      "password_env": ""
+    },
+    "task": {
+      "data_selector": "",
+      "wait_for_selector": "",
+      "extract": "text",
+      "max_items": 50
     }
-  ]
-}
+  }
+]
