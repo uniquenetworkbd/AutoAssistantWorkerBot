@@ -129,7 +129,7 @@ The repository currently contains no enabled real target. This is intentional: t
 
 ```text
 playwright
-auto requests
+requests
 google-generativeai
 ```
 
