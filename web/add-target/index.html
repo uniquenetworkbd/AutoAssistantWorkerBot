@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <title>Add Target · AutoAssistantWorkerBot</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <main class="app">
+    <section class="card">
+      <header>
+        <p class="eyebrow">AutoAssistantWorkerBot</p>
+        <h1>Add target</h1>
+        <p class="muted">Add or update a JSON-first scraping target from Telegram.</p>
+      </header>
+
+      <form id="target-form" novalidate>
+        <label>Site Key<input id="site-key" name="site_key" required maxlength="80" pattern="[A-Za-z0-9._-]+" autocomplete="off"></label>
+        <label>Target URL<input id="target-url" name="target_url" type="url" required maxlength="2048" placeholder="https://example.com"></label>
+        <label>Data Selector<input id="data-selector" name="data_selector" maxlength="500" placeholder="CSS selector, e.g. article"></label>
+        <label>Extract Mode
+          <select id="extract-mode" name="extract_mode">
+            <option value="text">text</option>
+            <option value="html">html</option>
+            <option value="links">links</option>
+          </select>
+        </label>
+        <label class="switch-row"><span>Enabled</span><input id="enabled" name="enabled" type="checkbox"></label>
+        <button id="submit" type="submit">Add target</button>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>
