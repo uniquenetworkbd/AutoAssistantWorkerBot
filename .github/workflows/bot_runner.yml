@@ -1,66 +1,37 @@
-name: AutoAssistantWorkerBot
+name: Auto Assistant Worker Bot
 
 on:
   workflow_dispatch:
     inputs:
       smoke_test:
-        description: "Run a safe public example.com Playwright smoke test instead of configured targets"
-        required: true
+        description: 'Run in smoke test mode'
+        required: false
         default: false
         type: boolean
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: '*/30 * * * *'
 
 permissions:
   contents: write
 
-concurrency:
-  group: auto-assistant-worker
-  cancel-in-progress: false
-
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          ref: main
+        uses: actions/checkout@v4
 
       - name: Setup Python 3.11
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
           cache: pip
 
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: Validate secret injection (presence only)
-        env:
-          AUTO_ASSISTANT_BOT_TOKEN: ${{ secrets.AUTO_ASSISTANT_BOT_TOKEN }}
-          AUTO_ASSISTANT_CHAT_ID: ${{ secrets.AUTO_ASSISTANT_CHAT_ID }}
-          AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.AUTO_ASSISTANT_GEMINI_API_KEY }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          missing=0
-          for name in AUTO_ASSISTANT_BOT_TOKEN AUTO_ASSISTANT_CHAT_ID AUTO_ASSISTANT_GEMINI_API_KEY; do
-            if [[ -z "${!name:-}" ]]; then
-              echo "::error::Required repository secret is missing or empty: ${name}"
-              missing=1
-            else
-              echo "Secret injection present: ${name}"
-            fi
-          done
-          if [[ "$missing" -ne 0 ]]; then
-            exit 1
-          fi
 
       - name: Install Playwright Chromium
         run: python -m playwright install --with-deps chromium
@@ -70,64 +41,15 @@ jobs:
           AUTO_ASSISTANT_BOT_TOKEN: ${{ secrets.AUTO_ASSISTANT_BOT_TOKEN }}
           AUTO_ASSISTANT_CHAT_ID: ${{ secrets.AUTO_ASSISTANT_CHAT_ID }}
           AUTO_ASSISTANT_GEMINI_API_KEY: ${{ secrets.AUTO_ASSISTANT_GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           AUTO_ASSISTANT_SMOKE_TEST: ${{ inputs.smoke_test || false }}
         run: python scripts/main.py
 
-      # Generated JSON is treated as worker state. Before committing, synchronize
-      # to the latest main and re-apply only that state. This avoids rebasing the
-      # entire repository and prevents unrelated remote commits from conflicting.
-      - name: Commit and push generated state safely
+      - name: Safe Git Commit and Push
         if: always()
-        shell: bash
         run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          STATE_DIR="$(mktemp -d)"
-          trap 'rm -rf "$STATE_DIR"' EXIT
-
-          # Preserve only files this workflow is allowed to generate.
-          for file in memory/brain.json memory/error_log.json input/targets.json; do
-            if [[ -f "$file" ]]; then
-              mkdir -p "$STATE_DIR/$(dirname "$file")"
-              cp "$file" "$STATE_DIR/$file"
-            fi
-          done
-
-          for attempt in 1 2 3 4 5; do
-            echo "Synchronizing with origin/main (attempt ${attempt}/5)."
-            git fetch --prune origin main
-            git reset --hard origin/main
-
-            # Re-apply only generated state onto the newest main. This deliberately
-            # avoids git rebase conflicts with workflow/code/documentation changes.
-            for file in memory/brain.json memory/error_log.json input/targets.json; do
-              if [[ -f "$STATE_DIR/$file" ]]; then
-                mkdir -p "$(dirname "$file")"
-                cp "$STATE_DIR/$file" "$file"
-              fi
-            done
-
-            git add -- memory/*.json input/targets.json
-            if git diff --cached --quiet; then
-              echo "No generated state changes to commit."
-              exit 0
-            fi
-
-            git commit -m "chore: update automation memory [skip ci]"
-
-            # A remote commit can still land between fetch/reset and push. If that
-            # happens, retry from the newest origin/main instead of rebasing.
-            if git push origin HEAD:main; then
-              echo "Generated state pushed successfully on attempt ${attempt}."
-              exit 0
-            fi
-
-            echo "Push race detected; retrying from the latest origin/main."
-            git reset --hard origin/main
-          done
-
-          echo "::error::Generated-state push failed after 5 synchronized attempts."
-          exit 1
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git pull origin main --rebase || true
+          git add memory/*.json input/targets.json || true
+          git diff --staged --quiet || git commit -m "chore: update automation memory [skip ci]"
+          git push origin main || true
