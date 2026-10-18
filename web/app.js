@@ -1,172 +1,21 @@
 "use strict";
 
-const CONFIG = {
-  brain: "../memory/brain.json",
-  targets: "../input/targets.json",
-  errors: "../memory/error_log.json"
+const API = "https://api.github.com/repos/uniquenetworkbd/AutoAssistantWorkerBot/contents";
+const FILES = {
+  brain: `${API}/memory/brain.json?ref=main`,
+  targets: `${API}/input/targets.json?ref=main`,
+  errors: `${API}/memory/error_log.json?ref=main`
 };
+const $ = (id) => document.getElementById(id);
+const ui = { dot:$("operationalDot"), status:$("operationalStatus"), system:$("systemStatus"), description:$("statusDescription"), execution:$("lastExecution"), targets:$("targetCount"), errors:$("errorCount"), refresh:$("refreshButton"), targetBody:$("targetsBody"), errorState:$("errorState"), errorList:$("errorsContainer") };
 
-const elements = {
-  connectionStatus: document.getElementById("connectionStatus"),
-  refreshButton: document.getElementById("refreshButton"),
-  lastRun: document.getElementById("lastRun"),
-  systemStatus: document.getElementById("systemStatus"),
-  systemStatusMeta: document.getElementById("systemStatusMeta"),
-  targetCount: document.getElementById("targetCount"),
-  enabledTargetCount: document.getElementById("enabledTargetCount"),
-  errorCount: document.getElementById("errorCount"),
-  targetsState: document.getElementById("targetsState"),
-  targetsBody: document.getElementById("targetsBody"),
-  errorsState: document.getElementById("errorsState"),
-  errorsContainer: document.getElementById("errorsContainer")
-};
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function maskSensitiveText(value) {
-  if (!value) return "";
-  let text = String(value);
-  text = text.replace(/bot\d+:[A-Za-z0-9_-]{20,}/gi, "[REDACTED]");
-  text = text.replace(/(?:token|secret|password|api[_-]?key|authorization)\s*[:=]\s*[^\s,;"']+/gi, "[REDACTED]");
-  text = text.replace(/gh[pousr]_[A-Za-z0-9_]{20,}/g, "[REDACTED]");
-  text = text.replace(/AIza[0-9A-Za-z_-]{20,}/g, "[REDACTED]");
-  return text;
-}
-
-async function fetchJson(path) {
-  const response = await fetch(`${path}?v=${Date.now()}`, {
-    method: "GET",
-    cache: "no-store",
-    headers: { Accept: "application/json" }
-  });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
-}
-
-function findLastRun(value) {
-  if (!value || typeof value !== "object") return null;
-  const preferredKeys = ["last_run", "last_run_at", "lastRun", "lastRunAt", "last_executed_run", "last_executed_at", "last_execution", "last_execution_at", "updated_at"];
-  for (const key of preferredKeys) {
-    if (typeof value[key] === "string" || typeof value[key] === "number") return value[key];
-  }
-  for (const key of ["run", "execution", "worker", "state", "status", "meta"]) {
-    if (value[key] && typeof value[key] === "object") {
-      const nested = findLastRun(value[key]);
-      if (nested) return nested;
-    }
-  }
-  return null;
-}
-
-function formatTimestamp(value) {
-  if (value === null || value === undefined || value === "") return "No run recorded";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return escapeHtml(maskSensitiveText(value));
-  return escapeHtml(date.toLocaleString());
-}
-
-function renderBrain(brain) {
-  const lastRun = findLastRun(brain);
-  elements.lastRun.textContent = lastRun ? formatTimestamp(lastRun) : "No run recorded";
-  elements.systemStatus.textContent = lastRun ? "Active" : "Idle";
-  elements.systemStatusMeta.textContent = lastRun ? "Last execution detected" : "Waiting for an execution record";
-}
-
-function renderTargets(targets) {
-  if (!Array.isArray(targets)) throw new Error("targets.json is invalid");
-  const enabledCount = targets.filter((target) => target && target.enabled === true).length;
-  elements.targetCount.textContent = String(targets.length);
-  elements.enabledTargetCount.textContent = `${enabledCount} active`;
-  elements.targetsState.textContent = `${targets.length} target${targets.length === 1 ? "" : "s"}`;
-
-  if (targets.length === 0) {
-    elements.targetsBody.innerHTML = '<tr><td colspan="4" class="empty-cell">No targets configured.</td></tr>';
-    return;
-  }
-
-  elements.targetsBody.innerHTML = targets.map((target) => {
-    const siteKey = escapeHtml(target?.site_key || "—");
-    const url = escapeHtml(target?.target_url || "—");
-    const extract = escapeHtml(target?.task?.extract || "text");
-    const enabled = target?.enabled === true;
-    return `<tr>
-      <td><strong>${siteKey}</strong></td>
-      <td class="url">${url}</td>
-      <td><span class="mode-badge">${extract}</span></td>
-      <td><span class="target-status ${enabled ? "active" : "disabled"}">${enabled ? "Active" : "Disabled"}</span></td>
-    </tr>`;
-  }).join("");
-}
-
-function renderErrors(errors) {
-  if (!Array.isArray(errors)) throw new Error("error_log.json is invalid");
-  elements.errorCount.textContent = String(errors.length);
-  elements.errorsState.textContent = `${errors.length} entr${errors.length === 1 ? "y" : "ies"}`;
-
-  if (errors.length === 0) {
-    elements.errorsContainer.innerHTML = '<div class="empty-state">No errors recorded.</div>';
-    return;
-  }
-
-  elements.errorsContainer.innerHTML = [...errors].reverse().map((error) => {
-    const timestamp = escapeHtml(error?.timestamp || "Unknown time");
-    const stage = escapeHtml(error?.stage || "Unknown stage");
-    const siteKey = escapeHtml(error?.site_key || "—");
-    const message = escapeHtml(maskSensitiveText(error?.error || "Unknown error"));
-    return `<article class="error-card">
-      <div class="error-header"><span class="error-stage">${stage}</span><span class="error-time">${timestamp}</span></div>
-      <div class="error-site"><strong>Site:</strong> ${siteKey}</div>
-      <div class="error-message"><strong>Error:</strong> ${message}</div>
-    </article>`;
-  }).join("");
-}
-
-function setConnectionStatus(success, message) {
-  elements.connectionStatus.className = `status-badge ${success ? "online" : "error"}`;
-  elements.connectionStatus.textContent = message;
-}
-
-async function loadDashboard() {
-  elements.refreshButton.disabled = true;
-  elements.connectionStatus.className = "status-badge loading";
-  elements.connectionStatus.textContent = "Loading";
-  elements.targetsState.textContent = "Loading";
-  elements.errorsState.textContent = "Loading";
-
-  try {
-    const [brain, targets, errors] = await Promise.all([
-      fetchJson(CONFIG.brain),
-      fetchJson(CONFIG.targets),
-      fetchJson(CONFIG.errors)
-    ]);
-    renderBrain(brain);
-    renderTargets(targets);
-    renderErrors(errors);
-    setConnectionStatus(true, "Operational");
-  } catch (error) {
-    console.error("Dashboard loading failed:", error);
-    setConnectionStatus(false, "Unavailable");
-    elements.systemStatus.textContent = "Unavailable";
-    elements.systemStatusMeta.textContent = "Dashboard data could not be loaded";
-    elements.lastRun.textContent = "Unavailable";
-    elements.targetsState.textContent = "Unavailable";
-    elements.targetsBody.innerHTML = '<tr><td colspan="4" class="empty-cell">Unable to load target data.</td></tr>';
-    elements.errorsState.textContent = "Unavailable";
-    elements.errorsContainer.innerHTML = '<div class="empty-state">Unable to load error log.</div>';
-    elements.targetCount.textContent = "—";
-    elements.enabledTargetCount.textContent = "Unavailable";
-    elements.errorCount.textContent = "—";
-  } finally {
-    elements.refreshButton.disabled = false;
-  }
-}
-
-elements.refreshButton.addEventListener("click", loadDashboard);
-loadDashboard();
+function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");}
+function clean(v){return String(v??"").replace(/bot\d+:[A-Za-z0-9_-]{20,}/gi,"[REDACTED]").replace(/gh[pousr]_[A-Za-z0-9_]{20,}/g,"[REDACTED]").replace(/AIza[0-9A-Za-z_-]{20,}/g,"[REDACTED]");}
+async function getJson(url){const r=await fetch(url,{cache:"no-store",headers:{Accept:"application/vnd.github+json"}});if(!r.ok)throw new Error(`HTTP ${r.status}`);const p=await r.json();const bytes=Uint8Array.from(atob(String(p.content||"").replace(/\s/g,"")),c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes));}
+function executionOf(v){if(!v||typeof v!=="object")return null;for(const k of ["last_run","last_run_at","lastRun","lastRunAt","last_executed_at","last_execution","last_execution_at","timestamp","updated_at"]){if(typeof v[k]==="string"||typeof v[k]==="number")return v[k];}for(const k of ["run","execution","worker","state","meta"]){if(v[k]&&typeof v[k]==="object"){const x=executionOf(v[k]);if(x!==null)return x;}}return null;}
+function stateOf(brain,run){const s=typeof brain?.status==="string"?brain.status.toLowerCase():"";if(["active","running","online","operational"].includes(s))return "Active";if(["error","failed","offline","unavailable"].includes(s))return "Error";if(["idle","waiting","stopped"].includes(s))return "Idle";return run?"Active":"Idle";}
+function renderBrain(brain){const run=executionOf(brain),state=stateOf(brain,run);ui.system.textContent=state;ui.status.textContent=state;ui.dot.className=`status-dot ${state.toLowerCase()}`;if(run){const d=new Date(run);ui.execution.textContent=Number.isNaN(d.getTime())?esc(clean(run)):esc(d.toLocaleString());}else ui.execution.textContent="No run recorded";ui.description.textContent=run?"Latest worker execution record detected.":"No execution record is currently available.";}
+function renderTargets(list){if(!Array.isArray(list))throw new Error("Invalid targets data");ui.targets.textContent=String(list.length);if(!list.length){ui.targetBody.innerHTML='<tr><td colspan="4" class="table-state">No targets configured.</td></tr>';return;}ui.targetBody.innerHTML=list.map(t=>{const active=t?.enabled===true;return `<tr><td><strong>${esc(t?.site_key||"—")}</strong></td><td class="url">${esc(t?.target_url||"—")}</td><td><span class="mode-badge">${esc(t?.task?.extract||t?.extract_mode||"text")}</span></td><td><span class="target-status ${active?"active":"disabled"}">${active?"Active":"Disabled"}</span></td></tr>`;}).join("");}
+function renderErrors(list){if(!Array.isArray(list))throw new Error("Invalid error data");ui.errors.textContent=String(list.length);ui.errorState.textContent=`${list.length} entr${list.length===1?"y":"ies"}`;if(!list.length){ui.errorList.innerHTML='<div class="empty-state">No errors recorded.</div>';return;}ui.errorList.innerHTML=[...list].reverse().slice(0,20).map(e=>`<article class="error-card"><div class="error-header"><span class="error-stage">${esc(clean(e?.stage||"Unknown stage"))}</span><span class="error-time">${esc(clean(e?.timestamp||"Unknown time"))}</span></div><div class="error-site"><strong>Site:</strong> ${esc(clean(e?.site_key||"—"))}</div><div class="error-message"><strong>Error:</strong> ${esc(clean(e?.error||"Unknown error"))}</div></article>`).join("");}
+async function load(){ui.refresh.disabled=true;try{const [brain,targets,errors]=await Promise.all([getJson(FILES.brain),getJson(FILES.targets),getJson(FILES.errors)]);renderBrain(brain);renderTargets(targets);renderErrors(errors);}catch(e){console.error("Dashboard data load failed",e);ui.system.textContent="Unavailable";ui.status.textContent="Error";ui.dot.className="status-dot error";ui.description.textContent="Dashboard data could not be loaded.";ui.execution.textContent="Unavailable";ui.targets.textContent="—";ui.errors.textContent="—";ui.targetBody.innerHTML='<tr><td colspan="4" class="table-state">Unable to load target data.</td></tr>';ui.errorState.textContent="Unavailable";ui.errorList.innerHTML='<div class="empty-state">Unable to load the error log.</div>';}finally{ui.refresh.disabled=false;}}
+ui.refresh.addEventListener("click",load);load();
