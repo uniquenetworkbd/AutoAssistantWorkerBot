@@ -1,9 +1,9 @@
 """Secure Telegram WebApp receiver for the JSON-first target registry.
 
 This receiver runs as a short-lived GitHub Actions worker. It polls Telegram
-getUpdates, validates Telegram WebApp initData with HMAC-SHA-256, restricts
-writes to the configured admin user, and updates input/targets.json through
-the GitHub Contents API using the repository admin token.
+getUpdates, validates Telegram WebApp initData with HMAC-SHA-256, verifies the
+actual Telegram service-message sender is the configured admin, and updates
+input/targets.json through the GitHub Contents API using the admin token.
 """
 from __future__ import annotations
 
@@ -122,7 +122,8 @@ def github_headers(token: str) -> dict[str, str]:
 
 
 def github_get_targets(token: str) -> tuple[list[dict[str, Any]], str]:
-    url = f"{API}/repos/{REPO}/contents/{TARGETS_PATH.relative_to(ROOT).as_posix()}"
+    path = TARGETS_PATH.relative_to(ROOT).as_posix()
+    url = f"{API}/repos/{REPO}/contents/{path}"
     response = requests.get(url, headers=github_headers(token), params={"ref": BRANCH}, timeout=30)
     response.raise_for_status()
     payload = response.json()
@@ -198,13 +199,26 @@ def extract_webapp_data(update: dict[str, Any]) -> dict[str, Any] | None:
     return payload
 
 
+def verify_sender(update: dict[str, Any]) -> None:
+    """Bind the WebApp service message to Telegram's trusted sender identity."""
+    message = update.get("message") or {}
+    sender = message.get("from") or {}
+    sender_id = str(sender.get("id", ""))
+    if sender_id != ADMIN_USER_ID:
+        raise PermissionError("Telegram service-message sender is not authorized")
+
+
 def process_once() -> int:
     bot_token = required("AUTO_ASSISTANT_BOT_TOKEN")
     github_token = required("AutoAssistantWorkerBotAdmin")
     state = load_state()
     offset = state["last_update_id"] + 1
 
-    result = telegram_api("getUpdates", bot_token, json={"offset": offset, "timeout": 0, "allowed_updates": ["message"]})
+    result = telegram_api(
+        "getUpdates",
+        bot_token,
+        json={"offset": offset, "timeout": 0, "allowed_updates": ["message"]},
+    )
     updates = result.get("result", [])
     processed = 0
 
@@ -213,10 +227,9 @@ def process_once() -> int:
         try:
             payload = extract_webapp_data(update)
             if payload is None:
-                save_state(max(state["last_update_id"], update_id))
-                state["last_update_id"] = max(state["last_update_id"], update_id)
                 continue
 
+            verify_sender(update)
             validate_init_data(payload["initData"], bot_token)
             target = build_target(payload["target"])
             targets, sha = github_get_targets(github_token)
