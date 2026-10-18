@@ -128,12 +128,16 @@ def run(*, smoke_test: bool = False) -> dict[str, Any]:
     configured_targets = _load_targets()
     if smoke_test:
         # Safe public smoke target used only for a manual workflow validation.
+        # Validate the page with both a stable title and body-content check so
+        # the smoke test does not depend on a fragile single CSS selector.
         targets = [{
             "site_key": "github_actions_smoke_test",
             "enabled": True,
             "target_url": "https://example.com",
             "login": {"required": False},
-            "task": {"data_selector": "h1", "extract": "text", "max_items": 1},
+            "task": {"data_selector": "", "extract": "text", "max_items": 1},
+            "smoke_expect_title": "Example Domain",
+            "smoke_expect_text": "Example Domain",
         }]
     else:
         targets = [target for target in configured_targets if target.get("enabled", True)]
@@ -170,7 +174,12 @@ def run(*, smoke_test: bool = False) -> dict[str, Any]:
                     "error": None,
                 }
                 try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+                    response = page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+                    if response is None:
+                        raise ValueError("Page navigation returned no response")
+                    if not response.ok:
+                        raise ValueError(f"Page returned HTTP {response.status}: {url}")
+
                     if bool(login.get("required", False)):
                         selectors = _selectors_for(brain, site_key)
                         if selectors is None:
@@ -187,6 +196,26 @@ def run(*, smoke_test: bool = False) -> dict[str, Any]:
                             result["learned_selectors"] = True
                         _login(page, login, selectors)
                         result["authenticated"] = True
+
+                    if smoke_test:
+                        expected_title = str(target.get("smoke_expect_title", "")).strip()
+                        expected_text = str(target.get("smoke_expect_text", "")).strip()
+                        actual_title = page.title().strip()
+                        body_text = page.locator("body").inner_text().strip()
+                        if expected_title and actual_title != expected_title:
+                            raise ValueError(
+                                f"Smoke test title mismatch: expected={expected_title!r}, actual={actual_title!r}"
+                            )
+                        if expected_text and expected_text not in body_text:
+                            raise ValueError(
+                                f"Smoke test content missing: expected text {expected_text!r}"
+                            )
+                        result["smoke_validation"] = {
+                            "title": actual_title,
+                            "expected_title": expected_title,
+                            "content_check": bool(expected_text),
+                        }
+
                     result["records"] = _extract(page, task, url)
                     result["status"] = "success"
                     if site_key in brain and isinstance(brain[site_key], dict):
