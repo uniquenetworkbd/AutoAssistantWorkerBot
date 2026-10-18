@@ -134,5 +134,13 @@
     "url": "https://example.com",
     "error": "data_selector matched no elements: h1",
     "traceback": "NoneType: None\n"
+  },
+  {
+    "timestamp": "2026-10-18T08:42:45.367895+00:00",
+    "stage": "target_execution",
+    "site_key": "github_actions_smoke_test",
+    "url": "https://example.com",
+    "error": "Smoke test content missing: expected text 'Example Domain'",
+    "traceback": "NoneType: None\n"
   }
 ]
