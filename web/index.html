@@ -1,111 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Auto-Assistant Worker Bot operational dashboard">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Auto-Assistant Worker Bot Dashboard">
   <title>Auto-Assistant Worker Bot Dashboard</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-mark" aria-hidden="true">AA</div>
-      <div>
-        <p class="brand-kicker">AUTOMATION CONTROL</p>
-        <h1>Auto-Assistant Worker Bot Dashboard</h1>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">AA</span>
+        <div><h1>Auto-Assistant Worker Bot Dashboard</h1><p>Automation control and target monitoring</p></div>
       </div>
-    </div>
-    <div class="topbar-actions">
-      <span id="connectionStatus" class="status-badge loading">Loading</span>
-      <button id="refreshButton" class="button secondary" type="button">Refresh</button>
+      <div class="status-wrap"><span id="operationalDot" class="status-dot idle"></span><span id="operationalStatus" class="status-text">Idle</span></div>
     </div>
   </header>
-
-  <main class="container">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">SYSTEM STATUS</p>
-        <h2>Worker <span>Operations</span></h2>
-        <p class="hero-description">Monitor target execution, operational state, and recent worker errors from one focused dashboard.</p>
-      </div>
-      <div class="run-card">
-        <span>Last executed run</span>
-        <strong id="lastRun">—</strong>
-      </div>
-    </section>
-
-    <section class="status-grid" aria-label="System status">
-      <article class="status-card status-card-primary">
-        <div class="status-card-heading"><span class="dot"></span>Operational status</div>
-        <strong id="systemStatus">—</strong>
-        <span id="systemStatusMeta">Reading worker state...</span>
+  <main class="shell">
+    <section class="overview-grid" aria-label="System overview">
+      <article class="hero-card">
+        <div><p class="eyebrow">SYSTEM STATUS</p><h2 id="systemStatus">Idle</h2><p id="statusDescription">Waiting for the latest worker execution record.</p></div>
+        <div class="run-time"><span>Last execution</span><strong id="lastExecution">No run recorded</strong></div>
       </article>
-      <article class="status-card">
-        <span class="card-label">Targets</span>
-        <strong id="targetCount">—</strong>
-        <span id="enabledTargetCount">— active</span>
-      </article>
-      <article class="status-card">
-        <span class="card-label">Recent errors</span>
-        <strong id="errorCount">—</strong>
-        <span>Sanitized execution log</span>
-      </article>
+      <article class="metric-card"><span class="metric-label">Targets</span><strong id="targetCount">—</strong><span class="metric-note">Configured targets</span></article>
+      <article class="metric-card"><span class="metric-label">Errors</span><strong id="errorCount">—</strong><span class="metric-note">Recorded execution errors</span></article>
     </section>
 
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <p class="eyebrow">TARGET MONITORING</p>
-          <h3>Configured Targets</h3>
-        </div>
-        <span id="targetsState" class="panel-state">Loading</span>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Site Key</th>
-              <th scope="col">Target URL</th>
-              <th scope="col">Extract Mode</th>
-              <th scope="col">Status</th>
-            </tr>
-          </thead>
-          <tbody id="targetsBody">
-            <tr><td colspan="4" class="empty-cell">Loading targets...</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <section class="panel" aria-labelledby="targets-title">
+      <div class="panel-head"><div><p class="eyebrow">MONITORING</p><h2 id="targets-title">Targets</h2></div><button id="refreshButton" class="button secondary" type="button">Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Site Key</th><th scope="col">Target URL</th><th scope="col">Extract Mode</th><th scope="col">Status</th></tr></thead><tbody id="targetsBody"><tr><td colspan="4" class="table-state">Loading targets…</td></tr></tbody></table></div>
     </section>
 
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <p class="eyebrow">DIAGNOSTICS</p>
-          <h3>Error Log Monitor</h3>
-        </div>
-        <span id="errorsState" class="panel-state">Loading</span>
-      </div>
-      <div id="errorsContainer" class="errors-container">
-        <div class="empty-state">Loading recent errors...</div>
-      </div>
+    <section class="panel" aria-labelledby="errors-title">
+      <div class="panel-head"><div><p class="eyebrow">DIAGNOSTICS</p><h2 id="errors-title">Recent Error Log</h2></div><span id="errorState" class="panel-badge">Loading</span></div>
+      <div id="errorsContainer" class="error-list"><div class="table-state">Loading error log…</div></div>
     </section>
 
-    <section class="quick-action">
-      <div>
-        <p class="eyebrow">QUICK ACTION</p>
-        <h3>Manage targets from Telegram</h3>
-        <p>Open the Telegram Mini App to add or update a monitored target.</p>
-      </div>
-      <a class="button primary" href="./add-target/index.html">Open /add_target</a>
-    </section>
+    <section class="quick-action"><div><p class="eyebrow">QUICK ACTION</p><h2>Manage targets from Telegram</h2><p>Open the Telegram Mini App to add or update a target.</p></div><a class="button primary" href="./add-target/index.html">Open /add_target</a></section>
   </main>
-
-  <footer class="footer">
-    <span>Auto-Assistant Worker Bot</span>
-    <span>Operational dashboard</span>
-  </footer>
-
+  <footer>Auto-Assistant Worker Bot Dashboard</footer>
   <script src="./app.js" defer></script>
 </body>
 </html>
