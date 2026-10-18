@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="AutoAssistantWorkerBot JSON-first read-only dashboard">
+  <meta name="description" content="AutoAssistantWorkerBot public dashboard">
   <title>AutoAssistantWorkerBot Dashboard</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -13,7 +13,7 @@
       <div class="brand-mark">AA</div>
       <div>
         <h1>AutoAssistantWorkerBot</h1>
-        <p>JSON-First System Dashboard</p>
+        <p>Automation Dashboard</p>
       </div>
     </div>
     <div class="topbar-actions">
@@ -25,9 +25,9 @@
   <main class="container">
     <section class="hero">
       <div>
-        <p class="eyebrow">SYSTEM OVERVIEW</p>
-        <h2>GitHub Actions Worker <span>Dashboard</span></h2>
-        <p class="hero-description">Read-only view of the JSON-first automation state stored in the repository.</p>
+        <p class="eyebrow">LIVE STATUS</p>
+        <h2>Automation <span>Dashboard</span></h2>
+        <p class="hero-description">A clean, read-only view of current automation status and recent errors.</p>
       </div>
       <div class="last-updated">
         <span>Last refresh</span>
@@ -35,42 +35,50 @@
       </div>
     </section>
 
-    <section class="summary-grid">
-      <article class="summary-card"><div class="card-label">Targets</div><div id="targetCount" class="card-value">—</div><div id="enabledTargetCount" class="card-meta">— enabled</div></article>
-      <article class="summary-card"><div class="card-label">Brain</div><div id="brainStatus" class="card-value">—</div><div class="card-meta">memory/brain.json</div></article>
-      <article class="summary-card"><div class="card-label">Errors</div><div id="errorCount" class="card-value">—</div><div class="card-meta">memory/error_log.json</div></article>
+    <section class="summary-grid" aria-label="Dashboard status">
+      <article class="summary-card">
+        <div class="card-label">Connection</div>
+        <div id="dashboardStatus" class="card-value">—</div>
+        <div class="card-meta">Dashboard data status</div>
+      </article>
+      <article class="summary-card">
+        <div class="card-label">Targets</div>
+        <div id="targetCount" class="card-value">—</div>
+        <div id="enabledTargetCount" class="card-meta">— enabled</div>
+      </article>
+      <article class="summary-card">
+        <div class="card-label">Errors</div>
+        <div id="errorCount" class="card-value">—</div>
+        <div class="card-meta">Recorded execution errors</div>
+      </article>
     </section>
 
-    <section class="panel">
-      <div class="panel-header"><div><p class="eyebrow">INPUT</p><h3>Configured Targets</h3></div><span id="targetsState" class="panel-state">Loading...</span></div>
-      <div class="table-wrapper">
-        <table>
-          <thead><tr><th>Site Key</th><th>Status</th><th>Target URL</th><th>Extract</th><th>Max Items</th></tr></thead>
-          <tbody id="targetsTableBody"><tr><td colspan="5" class="empty-state">Loading targets...</td></tr></tbody>
-        </table>
+    <section class="panel mini-app-panel">
+      <div>
+        <p class="eyebrow">TELEGRAM</p>
+        <h3>Add or update a target</h3>
+        <p class="panel-description">Open the secure Telegram Mini App to submit a target.</p>
       </div>
+      <a class="button primary" href="./add-target/">Open /add_target</a>
     </section>
 
     <section class="panel">
-      <div class="panel-header"><div><p class="eyebrow">MEMORY</p><h3>System Brain</h3></div><span id="brainState" class="panel-state">Loading...</span></div>
-      <pre id="brainOutput" class="json-viewer">Loading brain.json...</pre>
-    </section>
-
-    <section class="panel">
-      <div class="panel-header"><div><p class="eyebrow">DIAGNOSTICS</p><h3>Error Log</h3></div><span id="errorsState" class="panel-state">Loading...</span></div>
-      <div id="errorsContainer" class="errors-container"><div class="empty-state">Loading error log...</div></div>
-    </section>
-
-    <section class="repository-info">
-      <div><span>Repository</span><strong>uniquenetworkbd/AutoAssistantWorkerBot</strong></div>
-      <div><span>Branch</span><strong>main</strong></div>
-      <div><span>Mode</span><strong>READ ONLY</strong></div>
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">DIAGNOSTICS</p>
+          <h3>Error Log Summary</h3>
+        </div>
+        <span id="errorsState" class="panel-state">Loading...</span>
+      </div>
+      <div id="errorsContainer" class="errors-container">
+        <div class="empty-state">Loading error log...</div>
+      </div>
     </section>
   </main>
 
   <footer class="footer">
-    <p>AutoAssistantWorkerBot · JSON-First Architecture</p>
-    <p>This dashboard contains no GitHub or Telegram credentials.</p>
+    <p>AutoAssistantWorkerBot · Public Dashboard</p>
+    <p>No credentials or private keys are stored in the dashboard frontend.</p>
   </footer>
 
   <script src="./app.js" defer></script>
