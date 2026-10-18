@@ -13,6 +13,10 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 ERROR_LOG = ROOT / "memory" / "error_log.json"
+WEBAPP_URL = os.getenv(
+    "AUTO_ASSISTANT_WEBAPP_URL",
+    "https://uniquenetworkbd.github.io/AutoAssistantWorkerBot/add-target/",
+)
 
 # Credentials can leak through exception strings, request URLs, tracebacks, or
 # API error payloads. Keep this sanitizer local to the persistence boundary.
@@ -91,6 +95,17 @@ def _telegram(method: str, **kwargs: Any) -> dict[str, Any]:
     return payload
 
 
+def _add_target_keyboard() -> dict[str, Any]:
+    return {
+        "keyboard": [[{
+            "text": "/add_target",
+            "web_app": {"url": WEBAPP_URL},
+        }]],
+        "resize_keyboard": True,
+        "is_persistent": True,
+    }
+
+
 def send_report(report: dict[str, Any]) -> None:
     """Send a compact human-readable report plus JSON details to Telegram."""
     summary = (
@@ -101,7 +116,14 @@ def send_report(report: dict[str, Any]) -> None:
         f"Failed: {report.get('failure_count', 0)}"
     )
     details = json.dumps(report, indent=2, ensure_ascii=False)
-    _telegram("sendMessage", data={"chat_id": chat_id(), "text": summary})
+    _telegram(
+        "sendMessage",
+        data={
+            "chat_id": chat_id(),
+            "text": summary,
+            "reply_markup": json.dumps(_add_target_keyboard()),
+        },
+    )
     # Telegram messages are limited to 4096 characters.
     for offset in range(0, len(details), 3900):
         _telegram(
