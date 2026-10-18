@@ -3,43 +3,59 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Auto-Assistant Worker Bot Dashboard">
-  <title>Auto-Assistant Worker Bot Dashboard</title>
+  <meta name="description" content="Operational dashboard for Auto-Assistant Worker Bot">
+  <meta name="referrer" content="no-referrer">
+  <title>Auto-Assistant Worker Bot · Operations</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <div class="brand">
+      <a class="brand" href="./" aria-label="Auto-Assistant Worker Bot dashboard">
         <span class="brand-icon" aria-hidden="true">AA</span>
-        <div><h1>Auto-Assistant Worker Bot Dashboard</h1><p>Automation control and target monitoring</p></div>
+        <span><strong>Auto-Assistant</strong><small>Worker Operations</small></span>
+      </a>
+      <div class="header-actions">
+        <span id="operationalStatus" class="status-pill"><i id="operationalDot" class="status-dot idle" aria-hidden="true"></i>Loading</span>
+        <button id="refreshButton" class="button secondary" type="button">Refresh</button>
       </div>
-      <div class="status-wrap"><span id="operationalDot" class="status-dot idle"></span><span id="operationalStatus" class="status-text">Idle</span></div>
     </div>
   </header>
+
   <main class="shell">
-    <section class="overview-grid" aria-label="System overview">
-      <article class="hero-card">
-        <div><p class="eyebrow">SYSTEM STATUS</p><h2 id="systemStatus">Idle</h2><p id="statusDescription">Waiting for the latest worker execution record.</p></div>
-        <div class="run-time"><span>Last execution</span><strong id="lastExecution">No run recorded</strong></div>
-      </article>
-      <article class="metric-card"><span class="metric-label">Targets</span><strong id="targetCount">—</strong><span class="metric-note">Configured targets</span></article>
-      <article class="metric-card"><span class="metric-label">Errors</span><strong id="errorCount">—</strong><span class="metric-note">Recorded execution errors</span></article>
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">LIVE OPERATIONS</p>
+        <h1 id="page-title">Worker command dashboard</h1>
+        <p class="hero-copy">Read-only visibility into configured targets, execution state and recorded errors.</p>
+      </div>
+      <div class="last-run"><span>Last execution</span><strong id="lastExecution">No record</strong></div>
+    </section>
+
+    <section class="metric-grid" aria-label="Operational metrics">
+      <article class="metric-card"><span>System</span><strong id="systemStatus">Unknown</strong><small id="statusDescription">Waiting for state data.</small></article>
+      <article class="metric-card"><span>Targets</span><strong id="targetCount">—</strong><small>Entries in input/targets.json</small></article>
+      <article class="metric-card"><span>Errors</span><strong id="errorCount">—</strong><small>Entries in memory/error_log.json</small></article>
+      <article class="metric-card"><span>Data source</span><strong>GitHub</strong><small>Public JSON read · no credentials</small></article>
     </section>
 
     <section class="panel" aria-labelledby="targets-title">
-      <div class="panel-head"><div><p class="eyebrow">MONITORING</p><h2 id="targets-title">Targets</h2></div><button id="refreshButton" class="button secondary" type="button">Refresh</button></div>
-      <div class="table-wrap"><table><thead><tr><th scope="col">Site Key</th><th scope="col">Target URL</th><th scope="col">Extract Mode</th><th scope="col">Status</th></tr></thead><tbody id="targetsBody"><tr><td colspan="4" class="table-state">Loading targets…</td></tr></tbody></table></div>
+      <div class="panel-head"><div><p class="eyebrow">TARGET REGISTRY</p><h2 id="targets-title">Configured targets</h2></div><span id="targetState" class="panel-badge">Loading</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Site</th><th>Target</th><th>Selector</th><th>Mode</th><th>Status</th></tr></thead><tbody id="targetsBody"><tr><td colspan="5" class="table-state">Loading target registry…</td></tr></tbody></table></div>
     </section>
 
     <section class="panel" aria-labelledby="errors-title">
-      <div class="panel-head"><div><p class="eyebrow">DIAGNOSTICS</p><h2 id="errors-title">Recent Error Log</h2></div><span id="errorState" class="panel-badge">Loading</span></div>
-      <div id="errorsContainer" class="error-list"><div class="table-state">Loading error log…</div></div>
+      <div class="panel-head"><div><p class="eyebrow">DIAGNOSTICS</p><h2 id="errors-title">Recent errors</h2></div><span id="errorState" class="panel-badge">Loading</span></div>
+      <div id="errorsContainer" class="error-list"><div class="table-state">Loading error history…</div></div>
     </section>
 
-    <section class="quick-action"><div><p class="eyebrow">QUICK ACTION</p><h2>Manage targets from Telegram</h2><p>Open the Telegram Mini App to add or update a target.</p></div><a class="button primary" href="./add-target/index.html">Open /add_target</a></section>
+    <section class="quick-action">
+      <div><p class="eyebrow">TELEGRAM</p><h2>Manage monitored targets</h2><p>Open the Mini App from Telegram to submit a signed target-management request.</p></div>
+      <a class="button primary" href="./add-target/">Open Mini App</a>
+    </section>
   </main>
-  <footer>Auto-Assistant Worker Bot Dashboard</footer>
+  <footer>Auto-Assistant Worker Bot · Read-only operations view</footer>
+  <noscript>This dashboard requires JavaScript to read the current JSON state.</noscript>
   <script src="./app.js" defer></script>
 </body>
 </html>

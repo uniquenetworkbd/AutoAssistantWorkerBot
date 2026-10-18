@@ -5,20 +5,19 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#0b1220">
-  <title>Add Target · Auto-Assistant Worker Bot</title>
+  <meta name="referrer" content="no-referrer">
+  <title>Manage Target · Auto-Assistant Worker Bot</title>
   <link rel="stylesheet" href="./styles.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <main class="page">
-    <section class="modal" aria-labelledby="title">
-      <header class="modal-head">
-        <div class="app-mark" aria-hidden="true">AA</div>
-        <div><p class="eyebrow">TELEGRAM MINI APP</p><h1 id="title">Manage target</h1><p class="subtitle">Add or update a monitored target.</p></div>
-      </header>
+    <section class="card" aria-labelledby="title">
+      <header class="card-head"><div class="app-mark" aria-hidden="true">AA</div><div><p class="eyebrow">TELEGRAM MINI APP</p><h1 id="title">Manage target</h1><p class="subtitle">Submit a target configuration to the bot.</p></div></header>
+      <div id="environment" class="environment" role="status" aria-live="polite">Checking Telegram session…</div>
       <form id="target-form" novalidate>
         <label for="site-key">Site Key<input id="site-key" name="site_key" required maxlength="80" pattern="[A-Za-z0-9._-]+" autocomplete="off" placeholder="example-site"></label>
-        <label for="target-url">Target URL<input id="target-url" name="target_url" type="url" required maxlength="2048" inputmode="url" placeholder="https://example.com"></label>
+        <label for="target-url">Target URL<input id="target-url" name="target_url" type="url" required maxlength="2048" inputmode="url" autocomplete="url" placeholder="https://example.com"></label>
         <label for="data-selector">Data Selector<input id="data-selector" name="data_selector" maxlength="500" autocomplete="off" placeholder="article, .item, #content"></label>
         <label for="extract-mode">Extract Mode<select id="extract-mode" name="extract_mode"><option value="text">text</option><option value="html">html</option><option value="links">links</option></select></label>
         <label class="toggle-row" for="enabled"><span><strong>Enabled</strong><small>Include this target in worker execution.</small></span><input id="enabled" name="enabled" type="checkbox" checked><span class="toggle" aria-hidden="true"></span></label>
