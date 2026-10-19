@@ -1,14 +1,49 @@
-# My Self-Learning Bot
+# Smart Self-Learning Telegram Bot (Serverless & Modular)
 
-This directory is an intentionally isolated project module inside the AutoAssistantWorkerBot repository.
+একটি সম্পূর্ণ ফ্রি, সার্ভারবিহীন (Serverless) এবং স্ব-শিক্ষিত (Self-Learning) টেলিগ্রাম বট, যা শুধুমাত্র **GitHub (Pages & Gist)**, **Telegram Bot API**, এবং **Google AI Studio (Gemini API)** ব্যবহার করে তৈরি করা হয়েছে।
 
-## Boundary
+## 🚀 প্রজেক্টের বৈশিষ্ট্য (Features)
+* **১০০% ফ্রি ও সার্ভারবিহীন:** কোনো প্রকার পেইড সার্ভার বা ব্যাকএন্ড ছাড়াই ব্রাউজার এবং ক্লাউড স্টোরেজে সচল থাকে।
+* **স্ব-শিক্ষিত মস্তিষ্ক (Self-Evolving Brain):** বট প্রথমে নিজের মেমোরি চেক করে; উত্তর না থাকলে Gemini শিক্ষক থেকে শিখে নিয়ে তা স্থায়ীভাবে সংরক্ষণ করে।
+* **ক্লাউড সিঙ্ক মেমোরি:** বটের সমস্ত জ্ঞান ও মেমোরি সরাসরি আপনার GitHub অ্যাকাউন্টে `brain.json` (Gist) আকারে সংরক্ষিত থাকে।
+* **ডুয়েল প্রোফাইল ড্যাশবোর্ড:** চ্যাট ইন্টারফেসে বট প্রোফাইল এবং জিমিনি (শিক্ষক) প্রোফাইল আলাদা ট্যাবে ম্যানেজ করার সুবিধা।
+* **টেলিগ্রাম ইন্টিগ্রেশন:** টেলিগ্রামের মাধ্যমেই রিমোটলি মেসেজ আদান-প্রদান এবং বটকে পরিচালনা করা যায়।
 
-- The module owns its own frontend and future bot logic.
-- It does not reuse the existing `scripts/`, `input/`, or `memory/` runtime files.
-- The existing AutoAssistantWorkerBot only provides a navigation entry point to this module.
-- Persistent bot knowledge/memory is planned to live in a GitHub Gist as `brain.json`, subject to a separate security and access design before implementation.
+---
 
-## Current status
+## 🛠️ প্রয়োজনীয় টুলস ও প্ল্যাটফর্ম
+1. **GitHub Account** (Repository ও GitHub Pages হোস্টিংয়ের জন্য)
+2. **GitHub Gist** (`brain.json` মেমোরি স্টোরেজের জন্য)
+3. **Telegram Bot Token** (Telegram BotFather থেকে সংগৃহীত)
+4. **Google AI Studio API Key** (Gemini 1.5 Flash মডেলের জন্য)
 
-Scaffold only. Functional bot features will be added after the project specification and architecture are finalized.
+---
+
+## ⚙️ সেটআপ ও ডিপ্লয়মেন্ট গাইড
+
+### ধাপ ১: GitHub Repository তৈরি
+১. GitHub-এ গিয়ে একটি নতুন **Private Repository** তৈরি করুন (যেমন: `smart-self-bot`)।
+
+### ধাপ ২: GitHub Gist তৈরি
+১. [gist.github.com](https://gist.github.com)-এ যান।
+২. ফাইলের নাম দিন: `brain.json`
+৩. ফাইলের ভেতরে প্রাথমিক ডেটা হিসেবে শুধু `{}` লিখে **Create secret gist** বাটনে ক্লিক করুন।
+৪. ব্রাউজারের ইউআরএল থেকে **Gist ID** কপি করে সংরক্ষণ করুন।
+
+### ধাপ ৩: GitHub Personal Access Token তৈরি
+১. GitHub Settings > Developer settings > Personal access tokens (Classic)-এ যান।
+২. একটি নতুন টোকেন তৈরি করুন এবং `gist` স্কোপে পারমিশন দিন। টোকেনটি কপি করে নিরাপদে রাখুন।
+
+### ধাপ ৪: কোড ডিপ্লয়মেন্ট
+১. আপনার প্রজেক্ট ফোল্ডারে `index.html` ফাইলটি আপলোড করুন।
+২. রিপোজিটরির **Settings > Pages** এ যান।
+৩. Branch হিসেবে `main` এবং Folder হিসেবে `/ (root)` সিলেক্ট করে **Save** করুন। কিছুক্ষণের মধ্যে একটি ফ্রি ডোমেইন লিংক পেয়ে যাবেন (যেমন: `username.github.io/repo-name`)।
+
+---
+
+## 💻 ব্যবহার করার নিয়ম
+১. আপনার ব্রাউজারে GitHub Pages-এর ডোমেইন লিংকটি ওপেন করুন।
+২. পেজ লোড হওয়ার পর প্রম্পট আসলে আপনার **GitHub Token**, **Gist ID**, এবং **Gemini API Key** ইনপুট দিন।
+৩. টেলিগ্রামে গিয়ে বটকে মেসেজ পাঠান অথবা `/teach [বিষয়]` লিখে বটকে নতুন তথ্য শিখিয়ে দিন।
+
+---
