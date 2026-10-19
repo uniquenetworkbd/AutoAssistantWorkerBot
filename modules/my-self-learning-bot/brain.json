@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "bot": {
+    "name": "My Self-Learning Bot",
+    "status": "initialized"
+  },
+  "knowledge": [],
+  "memory": [],
+  "learning_history": [],
+  "metadata": {
+    "storage": "github-gist-planned"
+  }
+}
