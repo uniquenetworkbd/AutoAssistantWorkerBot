@@ -1,18 +1,378 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="bn">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="My Self-Learning Bot">
-  <meta name="referrer" content="no-referrer">
-  <title>My Self-Learning Bot</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Self-Learning Bot Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0d1117; color: #c9d1d9; display: flex; flex-direction: column; height: 100vh; }
+        
+        /* Header & Navigation Tabs */
+        header { background-color: #161b22; border-bottom: 1px solid #30363d; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .logo-title { font-size: 18px; font-weight: bold; color: #58a6ff; }
+        .tabs { display: flex; gap: 10px; }
+        .tab-btn { background: #21262d; color: #8b949e; border: 1px solid #30363d; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
+        .tab-btn.active { background: #1f6feb; color: #ffffff; border-color: #1f6feb; }
+        
+        /* Main Layout */
+        main { flex: 1; overflow: hidden; position: relative; }
+        .tab-content { display: none; height: 100%; padding: 20px; overflow-y: auto; }
+        .tab-content.active { display: flex; flex-direction: column; }
+
+        /* Dashboard Cards & Stats */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; text-align: center; }
+        .card h4 { font-size: 13px; color: #8b949e; margin-bottom: 8px; }
+        .card p { font-size: 22px; font-weight: bold; color: #3fb950; }
+
+        /* Chat Interface */
+        .chat-container { flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .msg { max-width: 80%; padding: 10px 14px; border-radius: 10px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+        .msg.user { align-self: flex-end; background: #1f6feb; color: #fff; border-bottom-right-radius: 2px; }
+        .msg.bot { align-self: flex-start; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; border-bottom-left-radius: 2px; }
+        .msg .tag { display: block; font-size: 11px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; }
+
+        /* Input Controls */
+        .input-area { display: flex; gap: 10px; padding: 12px; background: #0d1117; border-top: 1px solid #30363d; }
+        input[type="text"] { flex: 1; background: #161b22; border: 1px solid #30363d; padding: 10px 14px; border-radius: 6px; color: #fff; font-size: 14px; outline: none; }
+        input[type="text"]:focus { border-color: #58a6ff; }
+        button.send-btn { background: #238636; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button.send-btn:hover { background: #2ea043; }
+
+        /* Status Bar */
+        footer { background: #161b22; border-top: 1px solid #30363d; padding: 8px 20px; font-size: 12px; color: #8b949e; display: flex; justify-content: space-between; }
+        .status-online { color: #3fb950; font-weight: bold; }
+    </style>
 </head>
 <body>
-  <main>
-    <h1>My Self-Learning Bot</h1>
-    <p>This independent module is reserved for the My Self-Learning Bot project.</p>
-    <p>Its learning logic, knowledge/memory design, and future implementation will remain isolated from AutoAssistantWorkerBot.</p>
-    <p><a href="../../">← Back to Auto-Assistant Worker Operations</a></p>
-  </main>
+
+    <header>
+        <div class="logo-title">Smart Self-Learning Bot</div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('bot-tab')">বট প্রোফাইল</button>
+            <button class="tab-btn" onclick="switchTab('gemini-tab')">জিমিনি (শিক্ষক) প্রোফাইল</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Tab 1: Bot Profile & Main Chat -->
+        <div id="bot-tab" class="tab-content active">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h4>মোট শেখা বিষয়</h4>
+                    <p id="stat-topics">০ টি</p>
+                </div>
+                <div class="card">
+                    <h4>সংরক্ষিত প্রশ্নোত্তর</h4>
+                    <p id="stat-qa">০ টি</p>
+                </div>
+                <div class="card">
+                    <h4>অভিজ্ঞতা বৃদ্ধি</h4>
+                    <p id="stat-exp">০%</p>
+                </div>
+                <div class="card">
+                    <h4>ক্লাউড মেমোরি সাইজ</h4>
+                    <p id="stat-size">০ KB</p>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div id="bot-chat-messages" class="chat-messages">
+                    <div class="msg bot">
+                        <span class="tag">সিস্টেম</span>
+                        হ্যালো! আমি আপনার স্ব-শিক্ষিত বট। চ্যাটে মেসেজ পাঠান বা আমাকে কোনো নতুন বিষয় শেখাতে "/teach [বিষয়]" লিখুন।
+                    </div>
+                </div>
+                <div class="input-area">
+                    <input type="text" id="bot-input" placeholder="প্রশ্ন করুন অথবা /teach [বিষয়] দিয়ে শেখান..." onkeydown="if(event.key==='Enter') sendBotMessage()">
+                    <button class="send-btn" onclick="sendBotMessage()">পাঠান</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Gemini Teacher Profile -->
+        <div id="gemini-tab" class="tab-content">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h4>এআই মডেল</h4>
+                    <p style="font-size: 16px; color: #58a6ff;">Gemini 1.5 Flash</p>
+                </div>
+                <div class="card">
+                    <h4>API ব্যবহারের অবস্থা</h4>
+                    <p style="font-size: 16px; color: #3fb950;">সক্রিয় (Active)</p>
+                </div>
+                <div class="card">
+                    <h4>শিক্ষকের ভূমিকা</h4>
+                    <p style="font-size: 16px; color: #d29922;">প্রধান কনসেপ্ট ও টিচার</p>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div id="gemini-chat-messages" class="chat-messages">
+                    <div class="msg bot">
+                        <span class="tag">জিমিনি কনসোল</span>
+                        এটি আপনার শিক্ষক মডিউল। এখানে সরাসরি Gemini API-এর সাথে কথা বলতে পারবেন বা উত্তর বটের মেমোরিতে সেভ করতে পারবেন।
+                    </div>
+                </div>
+                <div class="input-area">
+                    <input type="text" id="gemini-input" placeholder="জিমিনিকে সরাসরি প্রশ্ন করুন..." onkeydown="if(event.key==='Enter') askGeminiDirect()">
+                    <button class="send-btn" style="background:#1f6feb;" onclick="askGeminiDirect()">জিজ্ঞেস করুন</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <span id="sync-status">মেমোরি স্টেটাস: প্রস্তুত হচ্ছে...</span>
+        <span id="telegram-status" class="status-online">টেলিগ্রাম: ওয়েটিং...</span>
+    </footer>
+
+    <script>
+        /* ===== ১. সিকিউর টোকেন ও কনফিগারেশন হ্যান্ডলিং ===== */
+        let GH_TOKEN = sessionStorage.getItem('ght') || prompt('GitHub Token দিন (Gist Scope সহ):') || '';
+        let GIST_ID  = sessionStorage.getItem('gid') || prompt('Gist ID দিন (brain.json):') || '';
+        let GEMINI_KEY = sessionStorage.getItem('gm') || prompt('Gemini API Key দিন:') || '';
+        let TG_TOKEN = sessionStorage.getItem('tg') || prompt('Telegram Bot Token দিন (ঐচ্ছিক):') || '';
+
+        sessionStorage.setItem('ght', GH_TOKEN);
+        sessionStorage.setItem('gid', GIST_ID);
+        sessionStorage.setItem('gm', GEMINI_KEY);
+        sessionStorage.setItem('tg', TG_TOKEN);
+
+        let BRAIN = { personality: "সহায়ক এআই", knowledge_base: [], qa_pairs: {} };
+
+        /* ===== ২. নেভিগেশন ও ট্যাব সিঙ্ক ===== */
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        /* ===== ৩. GitHub Gist ডেটাবেস সিঙ্ক (Brain Module) ===== */
+        async function gistLoad() {
+            const statusEl = document.getElementById('sync-status');
+            if(!GIST_ID || !GH_TOKEN) { statusEl.textContent = 'মেমোরি স্টেটাস: টোকেন বা Gist ID অনুপস্থিত'; return; }
+            try {
+                const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                    headers: { Authorization: `Bearer ${GH_TOKEN}` }
+                });
+                if(!res.ok) throw new Error();
+                const data = await res.json();
+                const content = Object.values(data.files)[0]?.content || '{}';
+                BRAIN = JSON.parse(content);
+                if(!BRAIN.knowledge_base) BRAIN.knowledge_base = [];
+                if(!BRAIN.qa_pairs) BRAIN.qa_pairs = {};
+                
+                statusEl.textContent = 'মেমোরি স্টেটাস: ক্লাউড থেকে লোড সফল';
+                updateDashboardStats(JSON.stringify(content).length);
+            } catch(e) {
+                statusEl.textContent = 'মেমোরি স্টেটাস: লোড ব্যর্থ (লোকাল মোড)';
+            }
+        }
+
+        let saveTimer;
+        function gistSave() {
+            const statusEl = document.getElementById('sync-status');
+            statusEl.textContent = 'মেমোরি স্টেটাস: সেভ হচ্ছে...';
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(async () => {
+                try {
+                    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                        method: 'PATCH',
+                        headers: { Authorization: `Bearer ${GH_TOKEN}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ files: { 'brain.json': { content: JSON.stringify(BRAIN, null, 2) } } })
+                    });
+                    statusEl.textContent = 'মেমোরি স্টেটাস: ক্লাউডে সেভ সফল';
+                    updateDashboardStats(JSON.stringify(BRAIN).length);
+                } catch(e) {
+                    statusEl.textContent = 'মেমোরি স্টেটাস: সেভ ব্যর্থ';
+                }
+            }, 2500);
+        }
+
+        function updateDashboardStats(bytes) {
+            document.getElementById('stat-topics').textContent = `${BRAIN.knowledge_base.length} টি`;
+            document.getElementById('stat-qa').textContent = `${Object.keys(BRAIN.qa_pairs).length} টি`;
+            document.getElementById('stat-size').textContent = `${(bytes / 1024).toFixed(2)} KB`;
+            const exp = Math.min(100, (BRAIN.knowledge_base.length * 5) + (Object.keys(BRAIN.qa_pairs).length * 2));
+            document.getElementById('stat-exp').textContent = `${exp}%`;
+        }
+
+        /* ===== ৪. জিমিনি এআই টিচার মডিউল ===== */
+        async function askTeacher(promptText) {
+            if(!GEMINI_KEY) return null;
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                });
+                const data = await res.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            } catch(e) { return null; }
+        }
+
+        /* ===== ৫. বটের থিংকিং ও লার্নিং মডিউল ===== */
+        async function thinkAndAnswer(userQuery) {
+            const query = userQuery.trim().toLowerCase();
+
+            // ১. সরাসরি প্রশ্নোত্তর মেমোরিতে খোঁজা
+            if(BRAIN.qa_pairs[query]) {
+                return { tag: 'স্বসংরক্ষিত মেমোরি', text: BRAIN.qa_pairs[query] };
+            }
+
+            // ২. নলেজ বেসে টপিকভিত্তিক খোঁজা (Smart Search)
+            for(const item of BRAIN.knowledge_base) {
+                if(query.includes(item.topic.toLowerCase())) {
+                    return { tag: `শিখে নেওয়া বিষয়: ${item.topic}`, text: item.notes };
+                }
+            }
+
+            // ৩. উত্তর মেমোরিতে না থাকলে শিক্ষক (Gemini) থেকে শেখা
+            const teacherReply = await askTeacher(`সহজ বাংলা ভাষায় উত্তর দাও:\n${userQuery}`);
+            if(teacherReply) {
+                BRAIN.qa_pairs[query] = teacherReply;
+                gistSave();
+                return { tag: 'নতুন শেখা (মেমোরিতে সংরক্ষিত)', text: teacherReply };
+            }
+
+            return { tag: 'ত্রুটি', text: 'দুঃখিত, কোনো উত্তর পাওয়া যায়নি এবং জিমিনি এআই সংযোগ ব্যর্থ হয়েছে।' };
+        }
+
+        async function teachTopic(topicName) {
+            appendMessage('bot-chat-messages', 'me', `/teach ${topicName}`);
+            appendMessage('bot-chat-messages', 'bot', 'বিষয়টি নিয়ে গবেষণা করা হচ্ছে...', 'Gemini Teacher');
+
+            const explanation = await askTeacher(`"${topicName}" বিষয়টিকে ৫টি গুরুত্বপূর্ণ পয়েন্টে সহজ বাংলায় বুঝিয়ে লেখো।`);
+            if(explanation) {
+                BRAIN.knowledge_base.push({
+                    id: Date.now(),
+                    topic: topicName,
+                    notes: explanation,
+                    date: new Date().toISOString()
+                });
+                gistSave();
+                appendMessage('bot-chat-messages', 'bot', explanation, 'নতুন বিষয় শেখা সম্পূর্ণ');
+            } else {
+                appendMessage('bot-chat-messages', 'bot', 'শেখানো সম্ভব হয়নি। আপনার Gemini API Key সঠিক আছে কি না পরীক্ষা করুন।', 'ত্রুটি');
+            }
+        }
+
+        /* ===== ৬. চ্যাট ইউআই রেন্ডারিং ===== */
+        function appendMessage(containerId, sender, text, tagText = '') {
+            const container = document.getElementById(containerId);
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg ${sender === 'me' ? 'user' : 'bot'}`;
+            
+            let html = '';
+            if(tagText) html += `<span class="tag">${tagText}</span>`;
+            html += String(text).replace(/</g, '&lt;').replace(/\n/g, '<br>');
+            
+            msgDiv.innerHTML = html;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendBotMessage() {
+            const input = document.getElementById('bot-input');
+            const val = input.value.trim();
+            if(!val) return;
+
+            input.value = '';
+            if(val.startsWith('/teach')) {
+                const topic = val.replace('/teach', '').trim();
+                if(topic) teachTopic(topic);
+                return;
+            }
+
+            appendMessage('bot-chat-messages', 'me', val);
+            appendMessage('bot-chat-messages', 'bot', 'ভাবছি...', 'প্রসেসিং');
+            
+            const res = await thinkAndAnswer(val);
+            // শেষ বার্তা রিমুভ করে উত্তর বসানো
+            const chatBox = document.getElementById('bot-chat-messages');
+            chatBox.removeChild(chatBox.lastChild);
+            
+            appendMessage('bot-chat-messages', 'bot', res.text, res.tag);
+        }
+
+        async function askGeminiDirect() {
+            const input = document.getElementById('gemini-input');
+            const val = input.value.trim();
+            if(!val) return;
+
+            input.value = '';
+            appendMessage('gemini-chat-messages', 'me', val);
+            appendMessage('gemini-chat-messages', 'bot', 'উত্তর তৈরি হচ্ছে...', 'Gemini Direct');
+
+            const reply = await askTeacher(val);
+            const chatBox = document.getElementById('gemini-chat-messages');
+            chatBox.removeChild(chatBox.lastChild);
+
+            if(reply) {
+                appendMessage('gemini-chat-messages', 'bot', reply, 'Gemini 1.5 Flash Output');
+            } else {
+                appendMessage('gemini-chat-messages', 'bot', 'Gemini API থেকে উত্তর পেতে সমস্যা হয়েছে।', 'ত্রুটি');
+            }
+        }
+
+        /* ===== ৭. ব্যাকগ্রাউন্ড টেলিগ্রাম বট লং পোলিং (Telegram Integration) ===== */
+        let lastUpdateId = 0;
+        async function pollTelegram() {
+            if(!TG_TOKEN) {
+                document.getElementById('telegram-status').textContent = 'টেলিগ্রাম: টোকেন নেই (বন্ধ)';
+                document.getElementById('telegram-status').style.color = '#8b949e';
+                return;
+            }
+            document.getElementById('telegram-status').textContent = 'টেলিগ্রাম: সক্রিয় (Polling)';
+            
+            try {
+                const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=20`);
+                const data = await res.json();
+
+                if(data.ok && data.result.length > 0) {
+                    for(const update of data.result) {
+                        lastUpdateId = update.update_id;
+                        if(update.message && update.message.text) {
+                            const chatId = update.message.chat.id;
+                            const text = update.message.text;
+
+                            if(text.startsWith('/teach')) {
+                                const topic = text.replace('/teach', '').trim();
+                                const exp = await askTeacher(`"${topic}" বিষয়টির সংক্ষিপ্ত বাংলা নোট দাও।`);
+                                if(exp) {
+                                    BRAIN.knowledge_base.push({ id: Date.now(), topic: topic, notes: exp });
+                                    gistSave();
+                                    await sendTgMessage(chatId, `শিখে নিলাম:\n\n${exp}`);
+                                }
+                            } else {
+                                const ans = await thinkAndAnswer(text);
+                                await sendTgMessage(chatId, `[${ans.tag}]\n\n${ans.text}`);
+                            }
+                        }
+                    }
+                }
+            } catch(e) {}
+            setTimeout(pollTelegram, 1500);
+        }
+
+        async function sendTgMessage(chatId, text) {
+            try {
+                await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: chatId, text: text })
+                });
+            } catch(e) {}
+        }
+
+        /* ===== ৮. অ্যাপ্লিকেশন ইনিশিয়ালাইজেশন ===== */
+        gistLoad();
+        pollTelegram();
+    </script>
 </body>
 </html>
