@@ -39,12 +39,22 @@ def required(name: str) -> str:
 
 
 def telegram_api(method: str, token: str, **kwargs: Any) -> dict[str, Any]:
-    response = requests.post(
-        f"https://api.telegram.org/bot{token}/{method}",
-        **kwargs,
-        timeout=30,
-    )
-    response.raise_for_status()
+    try:
+        response = requests.post(
+            f"https://api.telegram.org/bot{token}/{method}",
+            **kwargs,
+            timeout=30,
+        )
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        status_code = exc.response.status_code if exc.response is not None else None
+        if status_code == 409:
+            raise RuntimeError(
+                "Telegram API conflict: another consumer is already polling this bot "
+                "(getUpdates/webhook conflict). Use only one active consumer for this bot."
+            ) from exc
+        raise
+
     payload = response.json()
     if not payload.get("ok"):
         raise RuntimeError(f"Telegram API error: {payload}")
@@ -214,11 +224,19 @@ def process_once() -> int:
     state = load_state()
     offset = state["last_update_id"] + 1
 
-    result = telegram_api(
-        "getUpdates",
-        bot_token,
-        json={"offset": offset, "timeout": 0, "allowed_updates": ["message"]},
-    )
+    try:
+        result = telegram_api(
+            "getUpdates",
+            bot_token,
+            json={"offset": offset, "timeout": 0, "allowed_updates": ["message"]},
+        )
+    except RuntimeError as exc:
+        if "Telegram API conflict" in str(exc):
+            print(f"Telegram polling conflict: {exc}")
+            print("Another active Telegram consumer is already using this bot; skipping this run.")
+            return 0
+        raise
+
     updates = result.get("result", [])
     processed = 0
 
