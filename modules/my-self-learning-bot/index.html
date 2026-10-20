@@ -36,10 +36,16 @@
 
         /* Input Controls */
         .input-area { display: flex; gap: 10px; padding: 12px; background: #0d1117; border-top: 1px solid #30363d; }
-        input[type="text"] { flex: 1; background: #161b22; border: 1px solid #30363d; padding: 10px 14px; border-radius: 6px; color: #fff; font-size: 14px; outline: none; }
-        input[type="text"]:focus { border-color: #58a6ff; }
+        input[type="text"], input[type="password"] { flex: 1; background: #161b22; border: 1px solid #30363d; padding: 10px 14px; border-radius: 6px; color: #fff; font-size: 14px; outline: none; }
+        input[type="text"]:focus, input[type="password"]:focus { border-color: #58a6ff; }
         button.send-btn { background: #238636; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         button.send-btn:hover { background: #2ea043; }
+
+        /* Settings Panel Styling */
+        .settings-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .settings-box h3 { color: #58a6ff; margin-bottom: 12px; font-size: 16px; }
+        .form-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 13px; color: #8b949e; }
 
         /* Status Bar */
         footer { background: #161b22; border-top: 1px solid #30363d; padding: 8px 20px; font-size: 12px; color: #8b949e; display: flex; justify-content: space-between; }
@@ -52,7 +58,8 @@
         <div class="logo-title">Smart Self-Learning Bot</div>
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('bot-tab')">বট প্রোফাইল</button>
-            <button class="tab-btn" onclick="switchTab('gemini-tab')">জিমিনি (শিক্ষক) প্রোফাইল</button>
+            <button class="tab-btn" onclick="switchTab('gemini-tab')">জিমিনি (শিক্ষক)</button>
+            <button class="tab-btn" onclick="switchTab('settings-tab')">কনফিগারেশন</button>
         </div>
     </header>
 
@@ -122,6 +129,36 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tab 3: Configuration & Secrets Settings -->
+        <div id="settings-tab" class="tab-content">
+            <div class="settings-box">
+                <h3>GitHub ও Telegram সিক্রেটস কনফিগারেশন</h3>
+                <p style="font-size: 13px; color: #8b949e; margin-bottom: 15px;">আপনার গিটহব সিক্রেটস অনুযায়ী এখানে টোকেন ও আইডি সেট করুন। ব্রাউজারের লোকাল স্টোরেজে এগুলো নিরাপদে সংরক্ষিত থাকবে।</p>
+                
+                <div class="form-group">
+                    <label>GitHub Token (AUTOASSISTANTWORKERBOTADMIN / Gist Scope)</label>
+                    <input type="password" id="cfg-ghtoken" placeholder="ghp_xxxxxx">
+                </div>
+                <div class="form-group">
+                    <label>Gist ID (brain.json ফাইলের আইডি)</label>
+                    <input type="text" id="cfg-gistid" placeholder="Gist ID এখানে দিন">
+                </div>
+                <div class="form-group">
+                    <label>Gemini API Key (AUTO_ASSISTANT_GEMINI_API_KEY)</label>
+                    <input type="password" id="cfg-gemini" placeholder="AIzaSyXXXXX">
+                </div>
+                <div class="form-group">
+                    <label>Telegram Bot Token (AUTO_ASSISTANT_BOT_TOKEN)</label>
+                    <input type="password" id="cfg-tgtoken" placeholder="123456:ABC-DEF...">
+                </div>
+                <div class="form-group">
+                    <label>Telegram Chat ID (AUTO_ASSISTANT_CHAT_ID - ঐচ্ছিক)</label>
+                    <input type="text" id="cfg-chatid" placeholder="Chat ID">
+                </div>
+                <button class="send-btn" style="margin-top: 10px; width: 100%;" onclick="saveConfigurations()">সংরক্ষণ করুন ও কানেক্ট করুন</button>
+            </div>
+        </div>
     </main>
 
     <footer>
@@ -130,16 +167,54 @@
     </footer>
 
     <script>
-        /* ===== ১. সিকিউর টোকেন ও কনফিগারেশন হ্যান্ডলিং ===== */
-        let GH_TOKEN = sessionStorage.getItem('ght') || prompt('GitHub Token দিন (Gist Scope সহ):') || '';
-        let GIST_ID  = sessionStorage.getItem('gid') || prompt('Gist ID দিন (brain.json):') || '';
-        let GEMINI_KEY = sessionStorage.getItem('gm') || prompt('Gemini API Key দিন:') || '';
-        let TG_TOKEN = sessionStorage.getItem('tg') || prompt('Telegram Bot Token দিন (ঐচ্ছিক):') || '';
+        /* ===== ১. সিকিউর টোকেন ও কনফিগারেশন ম্যানেজমেন্ট (Prompt ہটিয়ে Settings Tab যুক্ত করা হয়েছে) ===== */
+        let GH_TOKEN = localStorage.getItem('AUTOASSISTANTWORKERBOTADMIN') || '';
+        let GIST_ID  = localStorage.getItem('GIST_ID') || '';
+        let GEMINI_KEY = localStorage.getItem('AUTO_ASSISTANT_GEMINI_API_KEY') || '';
+        let TG_TOKEN = localStorage.getItem('AUTO_ASSISTANT_BOT_TOKEN') || '';
+        let CHAT_ID = localStorage.getItem('AUTO_ASSISTANT_CHAT_ID') || '';
 
-        sessionStorage.setItem('ght', GH_TOKEN);
-        sessionStorage.setItem('gid', GIST_ID);
-        sessionStorage.setItem('gm', GEMINI_KEY);
-        sessionStorage.setItem('tg', TG_TOKEN);
+        // ইনপুট ফিল্ডে প্রি-ফিল করা
+        window.addEventListener('DOMContentLoaded', () => {
+            if(document.getElementById('cfg-ghtoken')) document.getElementById('cfg-ghtoken').value = GH_TOKEN;
+            if(document.getElementById('cfg-gistid')) document.getElementById('cfg-gistid').value = GIST_ID;
+            if(document.getElementById('cfg-gemini')) document.getElementById('cfg-gemini').value = GEMINI_KEY;
+            if(document.getElementById('cfg-tgtoken')) document.getElementById('cfg-tgtoken').value = TG_TOKEN;
+            if(document.getElementById('cfg-chatid')) document.getElementById('cfg-chatid').value = CHAT_ID;
+            
+            if(GH_TOKEN && GIST_ID) {
+                gistLoad();
+                pollTelegram();
+            } else {
+                document.getElementById('sync-status').textContent = 'মেমোরি স্টেটাস: কনফিগারেশন ট্যাব থেকে টোকেন সেট করুন';
+            }
+        });
+
+        function saveConfigurations() {
+            GH_TOKEN = document.getElementById('cfg-ghtoken').value.trim();
+            GIST_ID = document.getElementById('cfg-gistid').value.trim();
+            GEMINI_KEY = document.getElementById('cfg-gemini').value.trim();
+            TG_TOKEN = document.getElementById('cfg-tgtoken').value.trim();
+            CHAT_ID = document.getElementById('cfg-chatid').value.trim();
+
+            localStorage.setItem('AUTOASSISTANTWORKERBOTADMIN', GH_TOKEN);
+            localStorage.setItem('GIST_ID', GIST_ID);
+            localStorage.setItem('AUTO_ASSISTANT_GEMINI_API_KEY', GEMINI_KEY);
+            localStorage.setItem('AUTO_ASSISTANT_BOT_TOKEN', TG_TOKEN);
+            localStorage.setItem('AUTO_ASSISTANT_CHAT_ID', CHAT_ID);
+
+            alert('কনফিগারেশন সফলভাবে সংরক্ষিত হয়েছে!');
+            switchTabToBot();
+            gistLoad();
+            pollTelegram();
+        }
+
+        function switchTabToBot() {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelector('button[onclick*="bot-tab"]').classList.add('active');
+            document.getElementById('bot-tab').classList.add('active');
+        }
 
         let BRAIN = { personality: "সহায়ক এআই", knowledge_base: [], qa_pairs: {} };
 
@@ -155,7 +230,7 @@
         /* ===== ৩. GitHub Gist ডেটাবেস সিঙ্ক (Brain Module) ===== */
         async function gistLoad() {
             const statusEl = document.getElementById('sync-status');
-            if(!GIST_ID || !GH_TOKEN) { statusEl.textContent = 'মেমোরি স্টেটাস: টোকেন বা Gist ID অনুপস্থিত'; return; }
+            if(!GIST_ID || !GH_TOKEN) { statusEl.textContent = 'মেমোরি স্টেটাস: কনফিগারেশন পূরণ করুন'; return; }
             try {
                 const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                     headers: { Authorization: `Bearer ${GH_TOKEN}` }
@@ -170,7 +245,7 @@
                 statusEl.textContent = 'মেমোরি স্টেটাস: ক্লাউড থেকে লোড সফল';
                 updateDashboardStats(JSON.stringify(content).length);
             } catch(e) {
-                statusEl.textContent = 'মেমোরি স্টেটাস: লোড ব্যর্থ (লোকাল মোড)';
+                statusEl.textContent = 'মেমোরি স্টেটাস: লোড ব্যর্থ (টোকেন বা আইডি চেক করুন)';
             }
         }
 
@@ -220,19 +295,16 @@
         async function thinkAndAnswer(userQuery) {
             const query = userQuery.trim().toLowerCase();
 
-            // ১. সরাসরি প্রশ্নোত্তর মেমোরিতে খোঁজা
             if(BRAIN.qa_pairs[query]) {
                 return { tag: 'স্বসংরক্ষিত মেমোরি', text: BRAIN.qa_pairs[query] };
             }
 
-            // ২. নলেজ বেসে টপিকভিত্তিক খোঁজা (Smart Search)
             for(const item of BRAIN.knowledge_base) {
                 if(query.includes(item.topic.toLowerCase())) {
                     return { tag: `শিখে নেওয়া বিষয়: ${item.topic}`, text: item.notes };
                 }
             }
 
-            // ৩. উত্তর মেমোরিতে না থাকলে শিক্ষক (Gemini) থেকে শেখা
             const teacherReply = await askTeacher(`সহজ বাংলা ভাষায় উত্তর দাও:\n${userQuery}`);
             if(teacherReply) {
                 BRAIN.qa_pairs[query] = teacherReply;
@@ -293,7 +365,6 @@
             appendMessage('bot-chat-messages', 'bot', 'ভাবছি...', 'প্রসেসিং');
             
             const res = await thinkAndAnswer(val);
-            // শেষ বার্তা রিমুভ করে উত্তর বসানো
             const chatBox = document.getElementById('bot-chat-messages');
             chatBox.removeChild(chatBox.lastChild);
             
@@ -341,6 +412,9 @@
                             const chatId = update.message.chat.id;
                             const text = update.message.text;
 
+                            // সিকিউরিটি চেক: যদি চ্যাট আইডি সেট করা থাকে তবে শুধু নির্দিষ্ট আইডি থেকে মেসেজ গ্রহণ করবে
+                            if(CHAT_ID && chatId.toString() !== CHAT_ID.toString()) continue;
+
                             if(text.startsWith('/teach')) {
                                 const topic = text.replace('/teach', '').trim();
                                 const exp = await askTeacher(`"${topic}" বিষয়টির সংক্ষিপ্ত বাংলা নোট দাও।`);
@@ -369,10 +443,6 @@
                 });
             } catch(e) {}
         }
-
-        /* ===== ৮. অ্যাপ্লিকেশন ইনিশিয়ালাইজেশন ===== */
-        gistLoad();
-        pollTelegram();
     </script>
 </body>
 </html>
